@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Central Public School - Management System</title>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcode.js/1.0.0/qrcode.min.js"></script>
     <style>
         * {
             margin: 0;
@@ -44,10 +44,12 @@
             display: flex;
             background: #f8f9fa;
             border-bottom: 2px solid #e0e0e0;
+            flex-wrap: wrap;
         }
 
         .tab {
             flex: 1;
+            min-width: 150px;
             padding: 15px;
             text-align: center;
             cursor: pointer;
@@ -87,7 +89,7 @@
             color: #333;
         }
 
-        .form-group input, .form-group select {
+        .form-group input, .form-group select, .form-group textarea {
             width: 100%;
             padding: 10px;
             border: 2px solid #e0e0e0;
@@ -96,7 +98,7 @@
             transition: border 0.3s;
         }
 
-        .form-group input:focus, .form-group select:focus {
+        .form-group input:focus, .form-group select:focus, .form-group textarea:focus {
             outline: none;
             border-color: #667eea;
         }
@@ -136,6 +138,11 @@
             color: white;
         }
 
+        .btn-warning {
+            background: #ffc107;
+            color: #333;
+        }
+
         .student-list {
             margin-top: 30px;
         }
@@ -149,10 +156,12 @@
             display: flex;
             justify-content: space-between;
             align-items: center;
+            flex-wrap: wrap;
         }
 
         .student-info {
             flex-grow: 1;
+            min-width: 300px;
         }
 
         .student-info h3 {
@@ -168,11 +177,46 @@
         .student-actions {
             display: flex;
             gap: 10px;
+            flex-wrap: wrap;
         }
 
-        .qr-code {
+        .modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.8);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+            overflow-y: auto;
+            padding: 20px;
+        }
+
+        .modal.active {
+            display: flex;
+        }
+
+        .modal-content {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            max-width: 600px;
+            width: 100%;
+            max-height: 90vh;
+            overflow-y: auto;
+        }
+
+        .qr-container {
             text-align: center;
             padding: 20px;
+        }
+
+        .qr-code-canvas {
+            margin: 20px auto;
+            display: block;
         }
 
         .chat-container {
@@ -300,6 +344,14 @@
                 left: 0;
                 top: 0;
             }
+            .print-area, .print-area * {
+                visibility: visible;
+            }
+            .print-area {
+                position: absolute;
+                left: 0;
+                top: 0;
+            }
         }
 
         .stats-grid {
@@ -324,6 +376,38 @@
 
         .stat-card p {
             opacity: 0.9;
+        }
+
+        .checkbox-list {
+            max-height: 400px;
+            overflow-y: auto;
+            border: 1px solid #e0e0e0;
+            border-radius: 5px;
+            padding: 15px;
+        }
+
+        .checkbox-item {
+            padding: 10px;
+            margin: 5px 0;
+            background: #f8f9fa;
+            border-radius: 5px;
+            display: flex;
+            align-items: center;
+        }
+
+        .checkbox-item input {
+            margin-right: 10px;
+            width: auto;
+        }
+
+        .url-display {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 5px;
+            word-break: break-all;
+            font-family: monospace;
+            margin: 15px 0;
+            border: 1px solid #e0e0e0;
         }
     </style>
 </head>
@@ -399,9 +483,10 @@
         <!-- Students List Tab -->
         <div id="students" class="tab-content">
             <h2>All Students</h2>
-            <div style="display: flex; gap: 10px; margin-bottom: 20px;">
+            <div style="display: flex; gap: 10px; margin-bottom: 20px; flex-wrap: wrap;">
                 <button class="btn btn-success" onclick="generateAllQRCodes()">Generate All QR Codes</button>
-                <button class="btn btn-info" onclick="sendBulkSMS()">Send Bulk SMS</button>
+                <button class="btn btn-info" onclick="showBulkSMSModal()">Send Bulk SMS</button>
+                <button class="btn btn-warning" onclick="showSelectiveSMSModal()">Send Selective SMS</button>
             </div>
             <div class="form-group">
                 <label>Filter by Class</label>
@@ -468,32 +553,13 @@
 
         <!-- Attendance Tab -->
         <div id="attendance" class="tab-content">
-            <div id="adminLoginSection">
-                <h2>Admin Login</h2>
-                <p>Scan student QR code with mobile camera to mark attendance</p>
-                <div class="form-group">
-                    <label>Admin Password</label>
-                    <input type="password" id="adminPassword" placeholder="Enter admin password">
-                </div>
-                <button class="btn btn-primary" onclick="adminLogin()">Login to Mark Attendance</button>
-                <p style="margin-top: 20px; color: #666; font-size: 14px;">
-                    <strong>Instructions for Mobile QR Scanning:</strong><br>
-                    1. Login with admin password (default: admin123)<br>
-                    2. On mobile, the camera will automatically open<br>
-                    3. Point camera at student's QR code<br>
-                    4. Attendance will be marked automatically
-                </p>
-            </div>
-            
-            <div id="attendanceSection" style="display: none;">
-                <h2>Mark Attendance</h2>
-                <button class="btn btn-danger" onclick="adminLogout()" style="float: right;">Logout</button>
-                <div class="scanner-container">
-                    <h3>Scan QR Code or Enter Roll Number</h3>
-                    <input type="text" id="scannerInput" class="scanner-input" placeholder="Scan QR code or type roll number" autofocus>
-                    <button class="btn btn-primary" onclick="markAttendance()">Mark Present</button>
-                    <div id="attendanceMessage" style="margin-top: 20px; font-size: 18px;"></div>
-                </div>
+            <h2>Mark Attendance</h2>
+            <div class="scanner-container">
+                <h3>Enter Roll Number to Mark Attendance</h3>
+                <p style="color: #666; margin: 15px 0;">Scan the QR code with any QR scanner app, it will show you the attendance URL. Open that URL to mark attendance automatically.</p>
+                <input type="text" id="scannerInput" class="scanner-input" placeholder="Enter roll number manually" autofocus>
+                <button class="btn btn-primary" onclick="markAttendanceManual()">Mark Present</button>
+                <div id="attendanceMessage" style="margin-top: 20px; font-size: 18px;"></div>
             </div>
         </div>
 
@@ -527,17 +593,70 @@
         </div>
     </div>
 
+    <!-- QR Code Modal -->
+    <div id="qrModal" class="modal">
+        <div class="modal-content">
+            <div id="qrModalContent"></div>
+        </div>
+    </div>
+
+    <!-- SMS Modal -->
+    <div id="smsModal" class="modal">
+        <div class="modal-content">
+            <div id="smsModalContent"></div>
+        </div>
+    </div>
+
     <script>
         // Initialize data storage
         let students = JSON.parse(localStorage.getItem('students')) || [];
         let attendance = JSON.parse(localStorage.getItem('attendance')) || {};
         let currentBill = { student: null, items: [] };
-        let isAdminLoggedIn = false;
-        const ADMIN_PASSWORD = 'admin123'; // Change this password as needed
+
+        // Get the base URL for attendance marking
+        const BASE_URL = window.location.href.split('?')[0];
 
         // Set today's date as default
         document.getElementById('reportDate').valueAsDate = new Date();
         document.getElementById('joiningDate').valueAsDate = new Date();
+
+        // Check if URL has attendance parameter
+        window.addEventListener('load', function() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const rollNumber = urlParams.get('attendance');
+            if (rollNumber) {
+                markAttendanceFromQR(rollNumber);
+            }
+        });
+
+        // Mark attendance from QR scan
+        function markAttendanceFromQR(rollNumber) {
+            const student = students.find(s => s.rollNumber === rollNumber);
+            if (!student) {
+                alert('❌ Student not found!');
+                return;
+            }
+
+            const today = new Date().toISOString().split('T')[0];
+            if (!attendance[today]) {
+                attendance[today] = {};
+            }
+
+            if (attendance[today][rollNumber]) {
+                alert(`⚠️ Attendance already marked!\n\nName: ${student.name}\nRoll No: ${rollNumber}\nFirst marked at: ${attendance[today][rollNumber].time}`);
+                return;
+            }
+
+            attendance[today][rollNumber] = {
+                name: student.name,
+                class: student.class,
+                time: new Date().toLocaleTimeString('en-IN')
+            };
+
+            localStorage.setItem('attendance', JSON.stringify(attendance));
+
+            alert(`✅ Attendance Marked Successfully!\n\nName: ${student.name}\nRoll No: ${rollNumber}\nClass: ${student.class}\nTime: ${attendance[today][rollNumber].time}`);
+        }
 
         // Tab switching
         function showTab(tabName) {
@@ -552,8 +671,6 @@
 
             if (tabName === 'students') {
                 displayStudents();
-            } else if (tabName === 'billing') {
-                // Don't load options automatically
             } else if (tabName === 'reports') {
                 generateReport();
             }
@@ -565,7 +682,6 @@
             
             const rollNumber = document.getElementById('rollNumber').value;
             
-            // Check if roll number already exists
             if (students.find(s => s.rollNumber === rollNumber)) {
                 alert('Error: Roll number already exists!');
                 return;
@@ -591,7 +707,7 @@
             document.getElementById('joiningDate').valueAsDate = new Date();
         }
 
-        // Calculate attendance percentage for a student
+        // Calculate attendance
         function getAttendancePercentage(rollNumber) {
             let totalDays = 0;
             let presentDays = 0;
@@ -607,7 +723,6 @@
             return Math.round((presentDays / totalDays) * 100);
         }
 
-        // Get total present days for a student
         function getPresentDays(rollNumber) {
             let presentDays = 0;
             for (let date in attendance) {
@@ -648,7 +763,8 @@
                         <p><strong>Attendance:</strong> ${presentDays} days (${attendancePercent}%)</p>
                     </div>
                     <div class="student-actions">
-                        <button class="btn btn-info" onclick="showQRCode('${student.rollNumber}', '${student.name}')">Show QR</button>
+                        <button class="btn btn-info" onclick="showQRCode(${student.id})">Show QR</button>
+                        <button class="btn btn-warning" onclick="sendIndividualSMS(${student.id})">Send SMS</button>
                         <button class="btn btn-danger" onclick="deleteStudent(${student.id})">Delete</button>
                     </div>
                 `;
@@ -660,6 +776,69 @@
             displayStudents();
         }
 
+        // Generate QR Code using canvas
+        function generateQRCodeCanvas(text, size = 256) {
+            const canvas = document.createElement('canvas');
+            canvas.width = size;
+            canvas.height = size;
+            
+            const qr = new QRCode(canvas, {
+                text: text,
+                width: size,
+                height: size,
+                colorDark: '#000000',
+                colorLight: '#ffffff',
+                correctLevel: QRCode.CorrectLevel.H
+            });
+            
+            return canvas;
+        }
+
+        // Show individual QR code
+        function showQRCode(studentId) {
+            const student = students.find(s => s.id === studentId);
+            if (!student) return;
+
+            const attendanceURL = `${BASE_URL}?attendance=${student.rollNumber}`;
+            
+            const modalContent = document.getElementById('qrModalContent');
+            modalContent.innerHTML = `
+                <div style="text-align: center;">
+                    <h2>Central Public School</h2>
+                    <h3>${student.name}</h3>
+                    <p><strong>Roll Number:</strong> ${student.rollNumber}</p>
+                    <p><strong>Class:</strong> ${student.class}</p>
+                    <div id="qrCodeContainer" style="margin: 20px auto;"></div>
+                    <div class="url-display">
+                        <strong>Attendance URL:</strong><br>
+                        ${attendanceURL}
+                    </div>
+                    <p style="font-size: 14px; color: #666; margin: 15px 0;">
+                        Scan this QR code with any QR scanner app.<br>
+                        It will open a link that marks attendance automatically.
+                    </p>
+                    <button class="btn btn-primary" onclick="closeModal('qrModal')">Close</button>
+                    <button class="btn btn-success" onclick="printQRCode()">Print QR</button>
+                </div>
+            `;
+            
+            document.getElementById('qrModal').classList.add('active');
+            
+            // Generate QR code
+            setTimeout(() => {
+                const container = document.getElementById('qrCodeContainer');
+                container.innerHTML = '';
+                new QRCode(container, {
+                    text: attendanceURL,
+                    width: 256,
+                    height: 256,
+                    colorDark: '#000000',
+                    colorLight: '#ffffff',
+                    correctLevel: QRCode.CorrectLevel.H
+                });
+            }, 100);
+        }
+
         // Generate all QR codes
         function generateAllQRCodes() {
             if (students.length === 0) {
@@ -667,74 +846,60 @@
                 return;
             }
 
-            const modal = document.createElement('div');
-            modal.style.cssText = 'position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.9); overflow-y: auto; z-index: 1000; padding: 20px;';
-            
-            let qrHTML = `
-                <div style="background: white; padding: 30px; border-radius: 10px; max-width: 1200px; margin: 0 auto;">
-                    <div style="text-align: center; margin-bottom: 30px;">
-                        <h1>Central Public School</h1>
-                        <h2>Student QR Codes</h2>
-                        <button class="btn btn-primary" onclick="window.print()">Print All QR Codes</button>
-                        <button class="btn btn-danger" onclick="this.closest('div').parentElement.parentElement.remove()">Close</button>
-                    </div>
-                    <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 20px;">
+            const modalContent = document.getElementById('qrModalContent');
+            let html = `
+                <div style="text-align: center; margin-bottom: 20px;">
+                    <h1>Central Public School</h1>
+                    <h2>Student QR Codes</h2>
+                    <button class="btn btn-primary" onclick="printAllQR()">Print All QR Codes</button>
+                    <button class="btn btn-danger" onclick="closeModal('qrModal')">Close</button>
+                </div>
+                <div id="allQRCodes" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 20px;">
             `;
 
             students.forEach((student, index) => {
-                qrHTML += `
-                    <div style="border: 2px solid #333; padding: 20px; text-align: center; page-break-inside: avoid;">
+                const attendanceURL = `${BASE_URL}?attendance=${student.rollNumber}`;
+                html += `
+                    <div class="print-area" style="border: 2px solid #333; padding: 20px; text-align: center; page-break-inside: avoid;">
                         <h3>${student.name}</h3>
                         <p><strong>Roll No:</strong> ${student.rollNumber}</p>
                         <p><strong>Class:</strong> ${student.class}</p>
-                        <div id="qr${index}" style="margin: 15px auto; display: flex; justify-content: center;"></div>
-                        <p style="font-size: 12px; color: #666;">Scan to mark attendance</p>
+                        <div id="qrMulti${index}" style="margin: 15px auto;"></div>
+                        <p style="font-size: 11px; color: #666; word-break: break-all;">${attendanceURL}</p>
                     </div>
                 `;
             });
 
-            qrHTML += '</div></div>';
-            modal.innerHTML = qrHTML;
-            document.body.appendChild(modal);
+            html += '</div>';
+            modalContent.innerHTML = html;
+            document.getElementById('qrModal').classList.add('active');
 
-            // Generate QR codes
-            students.forEach((student, index) => {
-                new QRCode(document.getElementById('qr' + index), {
-                    text: `CPS-ATTENDANCE:${student.rollNumber}`,
-                    width: 200,
-                    height: 200
+            // Generate all QR codes
+            setTimeout(() => {
+                students.forEach((student, index) => {
+                    const attendanceURL = `${BASE_URL}?attendance=${student.rollNumber}`;
+                    new QRCode(document.getElementById('qrMulti' + index), {
+                        text: attendanceURL,
+                        width: 200,
+                        height: 200,
+                        colorDark: '#000000',
+                        colorLight: '#ffffff',
+                        correctLevel: QRCode.CorrectLevel.H
+                    });
                 });
-            });
+            }, 100);
         }
 
-        // Show QR Code
-        function showQRCode(rollNumber, name) {
-            const student = students.find(s => s.rollNumber === rollNumber);
-            const modal = document.createElement('div');
-            modal.style.cssText = 'position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); display: flex; justify-content: center; align-items: center; z-index: 1000;';
-            modal.innerHTML = `
-                <div style="background: white; padding: 30px; border-radius: 10px; text-align: center; max-width: 400px;">
-                    <h2>Central Public School</h2>
-                    <h3>${name}</h3>
-                    <p><strong>Roll Number:</strong> ${rollNumber}</p>
-                    <p><strong>Class:</strong> ${student.class}</p>
-                    <div id="qrcode" style="margin: 20px auto;"></div>
-                    <p style="font-size: 14px; color: #666; margin: 15px 0;">Scan this QR code to mark attendance</p>
-                    <button class="btn btn-primary" onclick="this.closest('div').parentElement.remove()">Close</button>
-                    <button class="btn btn-success" onclick="printQR()">Print QR</button>
-                </div>
-            `;
-            document.body.appendChild(modal);
-            
-            new QRCode(document.getElementById('qrcode'), {
-                text: `CPS-ATTENDANCE:${rollNumber}`,
-                width: 256,
-                height: 256
-            });
-        }
-
-        function printQR() {
+        function printQRCode() {
             window.print();
+        }
+
+        function printAllQR() {
+            window.print();
+        }
+
+        function closeModal(modalId) {
+            document.getElementById(modalId).classList.remove('active');
         }
 
         // Delete student
@@ -747,7 +912,7 @@
             }
         }
 
-        // Billing - Load students by class
+        // Billing
         function loadStudentsByClass() {
             const selectedClass = document.getElementById('billClass').value;
             const select = document.getElementById('billStudent');
@@ -794,7 +959,6 @@
                 return;
             }
 
-            // Parse input (e.g., "Books 500")
             const parts = input.split(' ');
             const price = parseFloat(parts[parts.length - 1]);
             const name = parts.slice(0, -1).join(' ');
@@ -850,7 +1014,7 @@
                 </div>
                 <div style="margin-top: 30px; text-align: center; font-size: 12px; color: #666;">
                     <p>Thank you for your payment</p>
-                    <p>Central Public School | Contact: [School Contact]</p>
+                    <p>Central Public School</p>
                 </div>
             `;
         }
@@ -859,41 +1023,9 @@
             window.print();
         }
 
-        // Admin Login
-        function adminLogin() {
-            const password = document.getElementById('adminPassword').value;
-            if (password === ADMIN_PASSWORD) {
-                isAdminLoggedIn = true;
-                document.getElementById('adminLoginSection').style.display = 'none';
-                document.getElementById('attendanceSection').style.display = 'block';
-                alert('✅ Admin logged in successfully!\n\nYou can now scan QR codes to mark attendance.');
-            } else {
-                alert('❌ Incorrect password! Default password is: admin123');
-            }
-        }
-
-        function adminLogout() {
-            isAdminLoggedIn = false;
-            document.getElementById('adminLoginSection').style.display = 'block';
-            document.getElementById('attendanceSection').style.display = 'none';
-            document.getElementById('adminPassword').value = '';
-        }
-
-        // Attendance
-        document.getElementById('scannerInput').addEventListener('keypress', function(e) {
-            if (e.key === 'Enter') {
-                markAttendance();
-            }
-        });
-
-        function markAttendance() {
-            let rollNumber = document.getElementById('scannerInput').value.trim();
-            
-            // Extract roll number if it's from QR code
-            if (rollNumber.includes('CPS-ATTENDANCE:')) {
-                rollNumber = rollNumber.replace('CPS-ATTENDANCE:', '');
-            }
-            
+        // Manual attendance marking
+        function markAttendanceManual() {
+            const rollNumber = document.getElementById('scannerInput').value.trim();
             if (!rollNumber) return;
 
             const student = students.find(s => s.rollNumber === rollNumber);
@@ -911,7 +1043,6 @@
                 attendance[today] = {};
             }
 
-            // Check if already marked
             if (attendance[today][rollNumber]) {
                 document.getElementById('attendanceMessage').innerHTML = `
                     <div style="color: orange; font-weight: bold;">
@@ -953,8 +1084,18 @@
             }, 3000);
         }
 
-        // Bulk SMS
-        function sendBulkSMS() {
+        // SMS Functions
+        function sendIndividualSMS(studentId) {
+            const student = students.find(s => s.id === studentId);
+            if (!student) return;
+
+            const message = prompt(`Send SMS to ${student.parentName} (${student.phoneNumber}):\n\nEnter your message:`);
+            if (!message) return;
+
+            showSMSPreview([student], message);
+        }
+
+        function showBulkSMSModal() {
             const studentsWithPhone = students.filter(s => s.phoneNumber && s.phoneNumber.length === 10);
             
             if (studentsWithPhone.length === 0) {
@@ -962,20 +1103,131 @@
                 return;
             }
 
-            const message = prompt('Enter message to send to all parents:\n(Example: Dear parents, school will remain closed tomorrow due to maintenance.)');
-            
+            const message = prompt('Enter message to send to ALL parents:');
             if (!message) return;
 
-            const numbers = studentsWithPhone.map(s => s.phoneNumber).join(', ');
+            showSMSPreview(studentsWithPhone, message);
+        }
+
+        function showSelectiveSMSModal() {
+            const studentsWithPhone = students.filter(s => s.phoneNumber && s.phoneNumber.length === 10);
             
-            alert(`📱 Bulk SMS Feature\n\nTotal Recipients: ${studentsWithPhone.length}\n\nMessage: ${message}\n\nPhone Numbers: ${numbers}\n\n⚠️ Note: To actually send SMS, you need to integrate with an SMS API service like:\n- Twilio\n- MSG91\n- Fast2SMS\n- Textlocal\n\nFor now, this shows you the list of numbers to send to.`);
+            if (studentsWithPhone.length === 0) {
+                alert('No students with valid phone numbers found!');
+                return;
+            }
+
+            const modalContent = document.getElementById('smsModalContent');
+            modalContent.innerHTML = `
+                <h2>Select Students for SMS</h2>
+                <div style="margin: 20px 0;">
+                    <button class="btn btn-info" onclick="selectAllStudents()">Select All</button>
+                    <button class="btn btn-warning" onclick="deselectAllStudents()">Deselect All</button>
+                </div>
+                <div class="checkbox-list" id="studentCheckboxList">
+                    ${studentsWithPhone.map(student => `
+                        <div class="checkbox-item">
+                            <input type="checkbox" id="check_${student.id}" value="${student.id}" class="student-checkbox">
+                            <label for="check_${student.id}">
+                                <strong>${student.name}</strong> - ${student.parentName} - ${student.phoneNumber} (Class ${student.class})
+                            </label>
+                        </div>
+                    `).join('')}
+                </div>
+                <div class="form-group" style="margin-top: 20px;">
+                    <label>Message</label>
+                    <textarea id="selectiveSMSMessage" rows="4" placeholder="Enter your message here..."></textarea>
+                </div>
+                <div style="text-align: center; margin-top: 20px;">
+                    <button class="btn btn-primary" onclick="sendSelectiveSMS()">Send SMS</button>
+                    <button class="btn btn-danger" onclick="closeModal('smsModal')">Cancel</button>
+                </div>
+            `;
+
+            document.getElementById('smsModal').classList.add('active');
+        }
+
+        function selectAllStudents() {
+            document.querySelectorAll('.student-checkbox').forEach(cb => cb.checked = true);
+        }
+
+        function deselectAllStudents() {
+            document.querySelectorAll('.student-checkbox').forEach(cb => cb.checked = false);
+        }
+
+        function sendSelectiveSMS() {
+            const checkboxes = document.querySelectorAll('.student-checkbox:checked');
+            const selectedIds = Array.from(checkboxes).map(cb => parseInt(cb.value));
+            const message = document.getElementById('selectiveSMSMessage').value.trim();
+
+            if (selectedIds.length === 0) {
+                alert('Please select at least one student!');
+                return;
+            }
+
+            if (!message) {
+                alert('Please enter a message!');
+                return;
+            }
+
+            const selectedStudents = students.filter(s => selectedIds.includes(s.id));
+            closeModal('smsModal');
+            showSMSPreview(selectedStudents, message);
+        }
+
+        function showSMSPreview(studentList, message) {
+            const modalContent = document.getElementById('smsModalContent');
+            const numbers = studentList.map(s => s.phoneNumber).join(', ');
             
-            // You can integrate SMS API here
-            console.log('SMS Details:', {
-                recipients: studentsWithPhone.length,
-                numbers: studentsWithPhone.map(s => ({ name: s.name, parent: s.parentName, phone: s.phoneNumber })),
-                message: message
-            });
+            modalContent.innerHTML = `
+                <h2>📱 SMS Preview</h2>
+                <div style="background: #f8f9fa; padding: 15px; border-radius: 5px; margin: 20px 0;">
+                    <p><strong>Total Recipients:</strong> ${studentList.length}</p>
+                    <p><strong>Message:</strong></p>
+                    <div style="background: white; padding: 15px; border: 1px solid #e0e0e0; border-radius: 5px; margin-top: 10px;">
+                        ${message}
+                    </div>
+                </div>
+                <h3>Recipients List:</h3>
+                <div style="max-height: 300px; overflow-y: auto; background: #f8f9fa; padding: 15px; border-radius: 5px;">
+                    ${studentList.map(s => `
+                        <p><strong>${s.name}</strong> - ${s.parentName} - ${s.phoneNumber}</p>
+                    `).join('')}
+                </div>
+                <div style="background: #fff3cd; padding: 15px; border-radius: 5px; margin-top: 20px; border: 1px solid #ffc107;">
+                    <p><strong>⚠️ SMS Integration Required</strong></p>
+                    <p>To actually send SMS, integrate with an SMS gateway service like:</p>
+                    <ul style="margin: 10px 0; padding-left: 20px;">
+                        <li>Twilio (International)</li>
+                        <li>MSG91 (India)</li>
+                        <li>Fast2SMS (India)</li>
+                        <li>Textlocal (India)</li>
+                    </ul>
+                    <p style="margin-top: 10px; font-size: 14px;">Contact your technical team to set up the SMS API integration with your chosen provider.</p>
+                </div>
+                <div style="text-align: center; margin-top: 20px;">
+                    <button class="btn btn-primary" onclick="copySMSData()">Copy Numbers</button>
+                    <button class="btn btn-danger" onclick="closeModal('smsModal')">Close</button>
+                </div>
+            `;
+
+            document.getElementById('smsModal').classList.add('active');
+
+            // Store SMS data for copying
+            window.currentSMSData = {
+                numbers: numbers,
+                message: message,
+                recipients: studentList
+            };
+        }
+
+        function copySMSData() {
+            if (window.currentSMSData) {
+                const text = `Numbers: ${window.currentSMSData.numbers}\n\nMessage: ${window.currentSMSData.message}`;
+                navigator.clipboard.writeText(text).then(() => {
+                    alert('✅ SMS data copied to clipboard!');
+                });
+            }
         }
 
         // Reports
@@ -996,7 +1248,6 @@
             const presentStudents = relevantStudents.filter(s => attendedRolls.includes(s.rollNumber));
             const absentStudents = relevantStudents.filter(s => !attendedRolls.includes(s.rollNumber));
 
-            // Stats
             document.getElementById('statsGrid').innerHTML = `
                 <div class="stat-card">
                     <h3>${relevantStudents.length}</h3>
@@ -1016,7 +1267,6 @@
                 </div>
             `;
 
-            // Present students
             let reportHTML = '<h3>Present Students</h3><div class="attendance-grid">';
             presentStudents.forEach(student => {
                 reportHTML += `
@@ -1030,7 +1280,6 @@
             });
             reportHTML += '</div>';
 
-            // Absent students
             reportHTML += '<h3 style="margin-top: 30px;">Absent Students</h3><div class="attendance-grid">';
             absentStudents.forEach(student => {
                 reportHTML += `
