@@ -444,29 +444,25 @@ body{font-family:'DM Sans',sans-serif;background:var(--cream);color:var(--text-d
 <script>
 const MO=['','January','February','March','April','May','June','July','August','September','October','November','December'];
 
-<script type="module">
-import { initializeApp } from "https://www.gstatic.com/firebasejs/12.9.0/firebase-app.js";
-import { getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged } 
-from "https://www.gstatic.com/firebasejs/12.9.0/firebase-auth.js";
-import { getFirestore } 
-from "https://www.gstatic.com/firebasejs/12.9.0/firebase-firestore.js";
-
-const firebaseConfig = {
-  apiKey: "AIzaSyDA67oWl6Kq1kNXLylumXlC7YV5tgrsnBs",
-  authDomain: "central-public-school-1cd53.firebaseapp.com",
-  projectId: "central-public-school-1cd53",
-  storageBucket: "central-public-school-1cd53.firebasestorage.app",
-  messagingSenderId: "490014133859",
-  appId: "1:490014133859:web:f89fe318d46e3e768c3256"
+let db={
+  students:JSON.parse(localStorage.getItem('cps_s'))||[],
+  attendance:JSON.parse(localStorage.getItem('cps_a'))||{},
+  bills:JSON.parse(localStorage.getItem('cps_b'))||[],
+  sessions:JSON.parse(localStorage.getItem('cps_ss'))||[],
+  notices:JSON.parse(localStorage.getItem('cps_notices'))||[],
+  cur:localStorage.getItem('cps_cur')||'2026-27',
+  auth:JSON.parse(localStorage.getItem('cps_auth'))||null
 };
 
-const app = initializeApp(firebaseConfig);
-window.auth = getAuth(app);
-window.firestoreDB = getFirestore(app);
-window.signInWithEmailAndPassword = signInWithEmailAndPassword;
-window.signOut = signOut;
-window.onAuthStateChanged = onAuthStateChanged;
-
+function sv(){
+  localStorage.setItem('cps_s',JSON.stringify(db.students));
+  localStorage.setItem('cps_a',JSON.stringify(db.attendance));
+  localStorage.setItem('cps_b',JSON.stringify(db.bills));
+  localStorage.setItem('cps_ss',JSON.stringify(db.sessions));
+  localStorage.setItem('cps_notices',JSON.stringify(db.notices));
+  localStorage.setItem('cps_cur',db.cur);
+  localStorage.setItem('cps_auth',JSON.stringify(db.auth));
+}
 
 // Auth
 function doLogin(e){
