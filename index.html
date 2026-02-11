@@ -441,34 +441,16 @@ body{font-family:'DM Sans',sans-serif;background:var(--cream);color:var(--text-d
 <div class="twrap" id="twrap"></div>
 <div id="pr" style="display:none"></div>
 
+<script>
+const MO=['','January','February','March','April','May','June','July','August','September','October','November','December'];
+
 <script type="module">
-
-/* =========================
-   🔥 FIREBASE IMPORTS
-========================= */
 import { initializeApp } from "https://www.gstatic.com/firebasejs/12.9.0/firebase-app.js";
-import {
-  getAuth,
-  signInWithEmailAndPassword,
-  signOut,
-  onAuthStateChanged,
-  updatePassword
-} from "https://www.gstatic.com/firebasejs/12.9.0/firebase-auth.js";
+import { getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged } 
+from "https://www.gstatic.com/firebasejs/12.9.0/firebase-auth.js";
+import { getFirestore } 
+from "https://www.gstatic.com/firebasejs/12.9.0/firebase-firestore.js";
 
-import {
-  getFirestore,
-  collection,
-  addDoc,
-  getDocs,
-  setDoc,
-  doc,
-  getDoc,
-  deleteDoc
-} from "https://www.gstatic.com/firebasejs/12.9.0/firebase-firestore.js";
-
-/* =========================
-   🔐 FIREBASE CONFIG
-========================= */
 const firebaseConfig = {
   apiKey: "AIzaSyDA67oWl6Kq1kNXLylumXlC7YV5tgrsnBs",
   authDomain: "central-public-school-1cd53.firebaseapp.com",
@@ -479,231 +461,519 @@ const firebaseConfig = {
 };
 
 const app = initializeApp(firebaseConfig);
-const auth = getAuth(app);
-const db = getFirestore(app);
+window.auth = getAuth(app);
+window.firestoreDB = getFirestore(app);
+window.signInWithEmailAndPassword = signInWithEmailAndPassword;
+window.signOut = signOut;
+window.onAuthStateChanged = onAuthStateChanged;
 
-/* =========================
-   🌍 GLOBAL STATE
-========================= */
-let students = [];
-let bills = [];
-let notices = [];
-let currentSession = "";
 
-/* =========================
-   🔐 AUTH SYSTEM
-========================= */
-window.doLogin = async function(e){
+// Auth
+function doLogin(e){
   e.preventDefault();
-  const email = document.getElementById("loginUser").value;
-  const pass  = document.getElementById("loginPass").value;
-
-  try{
-    await signInWithEmailAndPassword(auth,email,pass);
-  }catch(err){
-    alert("Invalid email or password");
-  }
-};
-
-window.logout = async function(){
-  await signOut(auth);
-};
-
-onAuthStateChanged(auth,(user)=>{
-  if(user){
-    document.getElementById("loginPage").style.display="none";
-    document.getElementById("mainApp").style.display="block";
-    initApp();
+  const user=document.getElementById('loginUser').value.trim();
+  const pass=document.getElementById('loginPass').value;
+  
+  if(!db.auth){
+    db.auth={username:user,password:pass};
+    sv();
+    toast('Account created successfully!','suc');
+    showApp();
   }else{
-    document.getElementById("loginPage").style.display="flex";
-    document.getElementById("mainApp").style.display="none";
-  }
-});
-
-/* =========================
-   🚀 INIT APP
-========================= */
-async function initApp(){
-  await loadSession();
-  await loadStudents();
-  await loadBills();
-  await loadNotices();
-}
-
-/* =========================
-   📁 SESSION (settings/system)
-========================= */
-async function loadSession(){
-  const snap = await getDoc(doc(db,"settings","system"));
-  if(snap.exists()){
-    currentSession = snap.data().currentSession;
-    document.getElementById("sessTag").textContent =
-      "Session " + currentSession;
+    if(db.auth.username===user&&db.auth.password===pass){
+      showApp();
+    }else{
+      toast('Invalid credentials!','err');
+    }
   }
 }
 
-/* =========================
-   👥 STUDENTS
-========================= */
-async function loadStudents(){
-  const snap = await getDocs(collection(db,"students"));
-  students=[];
-  snap.forEach(d=>{
-    students.push({id:d.id,...d.data()});
-  });
+function showApp(){
+  document.getElementById('loginPage').style.display='none';
+  document.getElementById('mainApp').style.display='block';
+  init();
 }
 
-window.regStudent = async function(e){
-  e.preventDefault();
+function logout(){
+  if(confirm('Are you sure you want to logout?')){
+    document.getElementById('mainApp').style.display='none';
+    document.getElementById('loginPage').style.display='flex';
+    document.getElementById('loginForm').reset();
+  }
+}
 
-  const student={
-    name: rn.value,
-    rollNumber: rr.value,
-    class: rc.value,
-    dob: rd.value,
-    parentName: rp.value,
-    phoneNumber: rpm.value,
-    joiningDate: rj.value,
-    monthlyFee: parseFloat(rf.value),
-    address: ra.value,
-    session: currentSession,
-    createdAt: Date.now()
-  };
-
-  await addDoc(collection(db,"students"),student);
-  alert("Student Added");
-  await loadStudents();
-};
-
-/* =========================
-   📋 ATTENDANCE
-========================= */
-window.markAtt = async function(){
-  const roll = scanIn.value.trim();
-  if(!roll) return;
-
-  const student = students.find(s=>s.rollNumber===roll);
-  if(!student){
-    alert("Student not found");
+function changePassword(){
+  const current=document.getElementById('currentPass').value;
+  const newP=document.getElementById('newPass').value;
+  const confirm=document.getElementById('confirmPass').value;
+  
+  if(!current||!newP||!confirm){
+    toast('Please fill all fields','err');
     return;
   }
-
-  const today = new Date().toISOString().split("T")[0];
-
-  await setDoc(
-    doc(db,"attendance",today+"_"+roll),
-    {
-      rollNumber: roll,
-      name: student.name,
-      class: student.class,
-      date: today,
-      time: new Date().toLocaleTimeString("en-IN"),
-      session: currentSession
-    }
-  );
-
-  alert("Attendance Marked");
-};
-
-/* =========================
-   💳 BILLS
-========================= */
-async function loadBills(){
-  const snap = await getDocs(collection(db,"bills"));
-  bills=[];
-  snap.forEach(d=>{
-    bills.push({id:d.id,...d.data()});
-  });
+  
+  if(current!==db.auth.password){
+    toast('Current password is incorrect','err');
+    return;
+  }
+  
+  if(newP!==confirm){
+    toast('New passwords do not match','err');
+    return;
+  }
+  
+  if(newP.length<4){
+    toast('Password must be at least 4 characters','err');
+    return;
+  }
+  
+  db.auth.password=newP;
+  sv();
+  toast('Password changed successfully!','suc');
+  document.getElementById('currentPass').value='';
+  document.getElementById('newPass').value='';
+  document.getElementById('confirmPass').value='';
 }
 
-window.saveBill = async function(){
-  if(!cb.student) return alert("Select student");
+// Auto roll number - starts from 001 for each class
+function getNextRollNumber(cls){
+  const students=db.students.filter(s=>s.class===cls&&s.session===db.cur);
+  let maxNum=0;
+  students.forEach(s=>{
+    const num=parseInt(s.rollNumber);
+    if(!isNaN(num)&&num>maxNum)maxNum=num;
+  });
+  return String(maxNum+1).padStart(3,'0');
+}
 
-  const bill={
-    studentId: cb.student.id,
-    studentName: cb.student.name,
-    studentClass: cb.student.class,
-    rollNumber: cb.student.rollNumber,
-    parentName: cb.student.parentName,
-    phone: cb.student.phoneNumber,
-    month: parseInt(bMo.value),
-    year: parseInt(bYr.value),
-    total: cb.items.reduce((a,b)=>a+b.price,0),
-    createdAt: Date.now(),
-    session: currentSession,
-    paid:true
+function updateRollPreview(){
+  const cls=document.getElementById('rc').value;
+  if(cls){
+    document.getElementById('rr').value=getNextRollNumber(cls);
+  }else{
+    document.getElementById('rr').value='';
+  }
+}
+
+function init(){
+  document.getElementById('rj').valueAsDate=new Date();
+  document.getElementById('aDate').valueAsDate=new Date();
+  document.getElementById('rDate').valueAsDate=new Date();
+  const m=new Date().getMonth()+1;
+  ['bMo','ovMo'].forEach(id=>{const e=document.getElementById(id);if(e)e.value=m;});
+  document.getElementById('sessTag').textContent='Session '+db.cur;
+  populateFSess();
+  renderDash();renderStudents();renderAttR();renderSess();renderNotices();
+  
+  const p=new URLSearchParams(window.location.search),r=p.get('attendance');
+  if(r)markFromQR(r);
+}
+
+function populateFSess(){
+  const s=document.getElementById('fSess');
+  s.innerHTML='<option value="">All Sessions</option>';
+  [...new Set(db.students.map(x=>x.session).filter(Boolean))].sort().reverse().forEach(x=>{const o=document.createElement('option');o.value=x;o.textContent='Session '+x;s.appendChild(o);});
+}
+
+function goP(n,el){
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.ni').forEach(x=>x.classList.remove('active'));
+  document.getElementById('page-'+n).classList.add('active');
+  if(el)el.classList.add('active');
+  if(n==='dashboard')renderDash();
+  if(n==='students')renderStudents();
+  if(n==='reports')renderRpt();
+  if(n==='sessions')renderSess();
+  if(n==='billing')renderHist();
+  if(n==='notices')renderNotices();
+}
+
+function swBTab(n,el){
+  document.querySelectorAll('#page-billing .stab').forEach(t=>t.classList.remove('active'));
+  document.querySelectorAll('#page-billing .tp').forEach(t=>t.classList.remove('active'));
+  document.getElementById('bt-'+n).classList.add('active');el.classList.add('active');
+  if(n==='hist')renderHist();if(n==='ov')renderOv();
+}
+
+function toast(msg,type='inf',dur=3000){
+  const w=document.getElementById('twrap'),t=document.createElement('div');
+  t.className='toast '+type;
+  t.innerHTML=(type==='suc'?'✓':type==='err'?'✗':'ℹ')+' '+msg;
+  w.appendChild(t);setTimeout(()=>t.remove(),dur);
+}
+
+function opM(id){document.getElementById(id).classList.add('open');}
+function clsM(id){document.getElementById(id).classList.remove('open');}
+
+function regStudent(e){
+  e.preventDefault();
+  const roll=document.getElementById('rr').value.trim();
+  const cls=document.getElementById('rc').value;
+  if(db.students.find(s=>s.rollNumber===roll&&s.class===cls&&s.session===db.cur)){toast('Roll number exists in this class!','err');return;}
+  const s={
+    id:Date.now(),
+    name:document.getElementById('rn').value.trim(),
+    rollNumber:roll,
+    dob:document.getElementById('rd').value,
+    parentName:document.getElementById('rp').value.trim(),
+    phoneNumber:document.getElementById('rpm').value.trim(),
+    class:cls,
+    joiningDate:document.getElementById('rj').value,
+    monthlyFee:parseFloat(document.getElementById('rf').value),
+    address:document.getElementById('ra').value.trim(),
+    session:db.cur
   };
-
-  await addDoc(collection(db,"bills"),bill);
-  alert("Bill Saved");
-  await loadBills();
-};
-
-/* =========================
-   📢 NOTICES
-========================= */
-async function loadNotices(){
-  const snap = await getDocs(collection(db,"notices"));
-  notices=[];
-  snap.forEach(d=>{
-    notices.push({id:d.id,...d.data()});
-  });
+  db.students.push(s);sv();toast('Registered: '+s.name,'suc');
+  document.getElementById('sForm').reset();
+  document.getElementById('rj').valueAsDate=new Date();
+  renderStudents();renderDash();
 }
 
-window.sendNotice = async function(){
+function clrForm(){
+  document.getElementById('sForm').reset();
+  document.getElementById('rj').valueAsDate=new Date();
+  document.getElementById('rr').value='';
+}
+
+function getAP(r){let t=0,p=0;for(let d in db.attendance){t++;if(db.attendance[d][r])p++;}return t?Math.round(p/t*100):0;}
+
+function renderDash(){
+  const td=new Date().toISOString().split('T')[0],ta=db.attendance[td]||{};
+  const ss=db.students.filter(s=>s.session===db.cur),pr=ss.filter(s=>ta[s.rollNumber]).length;
+  const m=new Date().getMonth()+1,y=new Date().getFullYear();
+  const mb=db.bills.filter(b=>b.month==m&&b.year==y),col=mb.reduce((a,b)=>a+b.total,0);
+  document.getElementById('dStats').innerHTML=`<div class="sbox"><div class="sic si-b">👥</div><div class="snum">${ss.length}</div><div class="slbl">Total Students</div></div><div class="sbox"><div class="sic si-g">✓</div><div class="snum">${pr}</div><div class="slbl">Present Today</div></div><div class="sbox"><div class="sic si-r">⚠</div><div class="snum">${ss.length-pr}</div><div class="slbl">Absent Today</div></div><div class="sbox"><div class="sic si-gold">💰</div><div class="snum">₹${col.toLocaleString('en-IN')}</div><div class="slbl">Collected This Month</div></div>`;
+  const ae=document.getElementById('dAtt'),plist=ss.filter(s=>ta[s.rollNumber]).slice(0,5);
+  ae.innerHTML=plist.length?plist.map(s=>`<div class="ac pres" style="margin-bottom:7px"><div class="an">${s.name}</div><div class="as">Class ${s.class} · ${s.rollNumber}</div><div class="at">🕐 ${ta[s.rollNumber].time}</div></div>`).join('')+(pr>5?`<p style="color:var(--text-light);font-size:.75rem;margin-top:6px">+${pr-5} more...</p>`:''):'<div class="empty" style="padding:16px 0"><div class="ei">📋</div><p>No attendance today</p></div>';
+  const be=document.getElementById('dBills'),rb=[...db.bills].sort((a,b)=>b.createdAt-a.createdAt).slice(0,5);
+  be.innerHTML=rb.length?rb.map(b=>`<div style="display:flex;gap:10px;padding:8px;background:var(--cream);border-radius:7px;margin-bottom:5px"><div style="flex:1"><div style="font-size:.82rem;font-weight:600;color:var(--navy)">${b.studentName}</div><div style="font-size:.7rem;color:var(--text-light)">${MO[b.month]} ${b.year} · Class ${b.studentClass}</div></div><div style="font-family:'DM Mono',monospace;font-size:.82rem;font-weight:600;color:var(--navy)">₹${b.total.toLocaleString('en-IN')}</div></div>`).join(''):'<div class="empty" style="padding:16px 0"><div class="ei">💳</div><p>No bills yet</p></div>';
+}
+
+function renderStudents(){
+  const srch=(document.getElementById('srch')?.value||'').toLowerCase(),cls=document.getElementById('fCls')?.value||'',sess=document.getElementById('fSess')?.value||'';
+  let list=db.students.filter(s=>{if(cls&&s.class!==cls)return false;if(sess&&s.session!==sess)return false;if(srch&&!s.name.toLowerCase().includes(srch)&&!s.rollNumber.toLowerCase().includes(srch))return false;return true;});
+  document.getElementById('scnt').textContent=list.length;
+  const g=document.getElementById('sGrid');
+  if(!list.length){g.innerHTML='<div class="empty"><div class="ei">👤</div><h4>No students found</h4></div>';return;}
+  g.innerHTML=list.map(s=>{
+    const ap=getAP(s.rollNumber),init=s.name.split(' ').map(w=>w[0]).join('').substring(0,2).toUpperCase(),pm=db.bills.filter(b=>b.studentId===s.id).length;
+    return`<div class="sc"><div class="av">${init}</div><div class="sm"><h3>${s.name} <span class="bdg bdg-c">Class ${s.class}</span> <span class="bdg bdg-s">${s.session}</span></h3><div class="sub"><span>📋 ${s.rollNumber}</span><span>👪 ${s.parentName}</span><span>📱 ${s.phoneNumber}</span></div><div style="margin-top:5px;display:flex;align-items:center;gap:9px"><div style="flex:1;background:#e9ecef;border-radius:20px;height:5px;max-width:140px"><div style="background:${ap>=75?'var(--success)':ap>=50?'var(--warning)':'var(--danger)'};width:${ap}%;height:5px;border-radius:20px"></div></div><span style="font-size:.7rem;color:var(--text-light)">${ap}% · ${pm} bills</span></div></div><div class="sa"><button class="btn btn-i btn-xs" onclick="showQR(${s.id})">QR Code</button><button class="btn btn-g btn-xs" onclick="qkBill(${s.id})">Bill</button><button class="btn btn-d btn-xs" onclick="delStu(${s.id})">🗑</button></div></div>`;
+  }).join('');
+}
+
+function delStu(id){if(!confirm('Delete this student?'))return;db.students=db.students.filter(s=>s.id!==id);sv();renderStudents();renderDash();toast('Deleted','inf');}
+
+function qkBill(id){
+  goP('billing',document.querySelector('[onclick*=\'billing\']'));
+  setTimeout(()=>{const s=db.students.find(s=>s.id===id);if(!s)return;document.getElementById('bCls').value=s.class;loadBStu();setTimeout(()=>{document.getElementById('bStu').value=id;loadSBill();},110);},180);
+}
+
+const BU=window.location.href.split('?')[0];
+
+function showQR(id){
+  const s=db.students.find(s=>s.id===id);if(!s)return;
+  const url=BU+'?attendance='+s.rollNumber;
+  document.getElementById('qrMT').textContent=s.name+' — QR Code';
+  document.getElementById('qrMB').innerHTML=`<div style="text-align:center">
+    <div class="qrc" id="qrCS"><div class="qrh">🎓 Central Public School</div><div class="qrs">Session ${s.session} · Class ${s.class}</div><div id="qrCV" style="margin:10px auto;display:inline-block"></div><div class="qrn">${s.name}</div><div class="qrroll">Roll: ${s.rollNumber}</div></div>
+    <div class="np" style="display:flex;gap:9px;justify-content:center;margin-top:18px"><button class="btn btn-p" onclick="prQR()">🖼 Print Card</button><button class="btn btn-o" onclick="clsM('qrM')">Close</button></div>
+  </div>`;
+  opM('qrM');
+  setTimeout(()=>{
+    new QRCode(document.getElementById('qrCV'),{
+      text:url,
+      width:190,
+      height:190,
+      colorDark:'#0f1b2d',
+      colorLight:'#ffffff'
+    });
+  },100);
+}
+
+function prQR(){
+  const c=document.getElementById('qrCS'),pr=document.getElementById('pr');
+  pr.innerHTML='<div style="padding:28px;text-align:center">'+c.outerHTML+'</div>';
+  pr.style.display='block';window.print();pr.style.display='none';pr.innerHTML='';
+}
+
+function showDownloadQR(){
+  opM('downloadQrM');
+}
+
+function generateQRDownload(){
+  const cls=document.getElementById('dlQrCls').value;
+  const sess=document.getElementById('fSess')?.value||db.cur;
+  const list=db.students.filter(s=>{
+    if(s.session!==sess)return false;
+    if(cls&&s.class!==cls)return false;
+    return true;
+  });
+  if(!list.length){toast('No students match filter','err');return;}
+  
+  clsM('downloadQrM');
+  document.getElementById('allQrB').innerHTML=`<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:14px">${list.map((s,i)=>`<div style="text-align:center;border:2px solid var(--navy);border-radius:11px;padding:14px;page-break-inside:avoid"><div style="font-family:'Playfair Display',serif;font-size:.9rem;font-weight:800;color:var(--navy)">Central Public School</div><div style="font-size:.7rem;color:var(--text-light);margin:2px 0 8px">Session ${s.session} · Class ${s.class}</div><div id="qa${i}" style="margin:0 auto;display:inline-block"></div><div style="font-size:.88rem;font-weight:700;color:var(--navy);margin-top:7px">${s.name}</div><div style="font-family:'DM Mono',monospace;font-size:.75rem;color:var(--text-mid)">Roll: ${s.rollNumber}</div><div style="font-size:.7rem;color:var(--text-light);margin-top:2px">${s.phoneNumber}</div></div>`).join('')}</div>`;
+  opM('allQrM');
+  setTimeout(()=>{
+    list.forEach((s,i)=>{
+      new QRCode(document.getElementById('qa'+i),{
+        text:BU+'?attendance='+s.rollNumber,
+        width:150,
+        height:150,
+        colorDark:'#0f1b2d',
+        colorLight:'#ffffff'
+      });
+    });
+  },130);
+}
+
+function markFromQR(r){
+  const s=db.students.find(s=>s.rollNumber===r);
+  if(!s){alert('Student not found: '+r);return;}
+  const td=new Date().toISOString().split('T')[0];
+  if(!db.attendance[td])db.attendance[td]={};
+  if(db.attendance[td][r]){alert('Already marked!\n👤 '+s.name+'\n📝 '+r+'\n🕐 '+db.attendance[td][r].time);return;}
+  const time=new Date().toLocaleTimeString('en-IN');
+  db.attendance[td][r]={name:s.name,class:s.class,time};sv();
+  alert('Attendance Marked!\n👤 '+s.name+'\n📝 Roll: '+r+'\n📚 Class '+s.class+'\n🕐 '+time);
+  renderDash();renderAttR();
+}
+
+function markAtt(){
+  const r=document.getElementById('scanIn').value.trim();if(!r)return;
+  const s=db.students.find(s=>s.rollNumber===r),f=document.getElementById('sFeed');f.style.display='flex';
+  if(!s){f.className='sfeed err';f.innerHTML='✗ Not found: <b>'+r+'</b>';}
+  else{
+    const td=new Date().toISOString().split('T')[0];if(!db.attendance[td])db.attendance[td]={};
+    if(db.attendance[td][r]){f.className='sfeed wrn';f.innerHTML='⚠ Already marked — <b>'+s.name+'</b> at '+db.attendance[td][r].time;}
+    else{const time=new Date().toLocaleTimeString('en-IN');db.attendance[td][r]={name:s.name,class:s.class,time};sv();renderAttR();renderDash();f.className='sfeed suc';f.innerHTML='✓ <b>'+s.name+'</b> · Class '+s.class+' · 🕐 '+time;}
+  }
+  document.getElementById('scanIn').value='';setTimeout(()=>{f.style.display='none';},3500);
+}
+
+function renderAttR(){
+  const date=document.getElementById('aDate')?.value,cls=document.getElementById('aCls')?.value||'';if(!date)return;
+  const da=db.attendance[date]||{};let ss=db.students.filter(s=>s.session===db.cur);if(cls)ss=ss.filter(s=>s.class===cls);
+  const pr=ss.filter(s=>da[s.rollNumber]),ab=ss.filter(s=>!da[s.rollNumber]);
+  document.getElementById('aStats').innerHTML=`<div class="sbox"><div class="sic si-b">👥</div><div class="snum">${ss.length}</div><div class="slbl">Total</div></div><div class="sbox"><div class="sic si-g">✓</div><div class="snum">${pr.length}</div><div class="slbl">Present</div></div><div class="sbox"><div class="sic si-r">✗</div><div class="snum">${ab.length}</div><div class="slbl">Absent</div></div><div class="sbox"><div class="sic si-gold">📊</div><div class="snum">${ss.length?Math.round(pr.length/ss.length*100):0}%</div><div class="slbl">Rate</div></div>`;
+  let h='<div class="sdiv">Present ('+pr.length+')</div><div class="agrid">';
+  pr.forEach(s=>{h+=`<div class="ac pres"><div class="an">${s.name}</div><div class="as">Roll ${s.rollNumber} · Class ${s.class}</div><div class="at">🕐 ${da[s.rollNumber].time}</div></div>`;});
+  h+='</div><div class="sdiv">Absent ('+ab.length+')</div><div class="agrid">';
+  ab.forEach(s=>{h+=`<div class="ac abs"><div class="an">${s.name}</div><div class="as">Roll ${s.rollNumber} · Class ${s.class}</div><div class="as">📱 ${s.phoneNumber}</div></div>`;});
+  h+='</div>';document.getElementById('aReport').innerHTML=h;
+}
+
+let cb={student:null,items:[]};
+
+function loadBStu(){
+  const cls=document.getElementById('bCls').value,sel=document.getElementById('bStu');
+  sel.innerHTML='<option value="">Choose student</option>';if(!cls)return;
+  db.students.filter(s=>s.class===cls&&s.session===db.cur).forEach(s=>{const o=document.createElement('option');o.value=s.id;o.textContent=s.name+' ('+s.rollNumber+')';sel.appendChild(o);});
+}
+
+function loadSBill(){
+  const id=parseInt(document.getElementById('bStu').value);
+  if(!id){document.getElementById('bPrevW').style.display='none';return;}
+  const s=db.students.find(s=>s.id===id);if(!s)return;
+  cb.student=s;cb.items=[{name:'Monthly Fee',price:s.monthlyFee}];
+  updBP();
+}
+
+function updBP(){
+  if(!cb.student)return;
+  const s=cb.student,tot=cb.items.reduce((a,b)=>a+b.price,0);
+  const mo=parseInt(document.getElementById('bMo').value),yr=document.getElementById('bYr').value;
+  
+  // Check if already paid
+  const existing=db.bills.find(b=>b.studentId===s.id&&b.month===mo&&b.year==yr);
+  const paidBadge=existing?'<span class="bdg bdg-paid">PAID ✓</span>':'';
+  
+  document.getElementById('bPrevW').style.display='block';
+  document.getElementById('bPrev').innerHTML=`<div style="background:#fff;border:2px solid var(--navy);border-radius:8px;padding:24px;max-width:500px;margin:0 auto" id="pbill">
+    <div style="font-family:'Playfair Display',serif;font-size:1.4rem;font-weight:900;color:var(--navy);text-align:center">Central Public School</div>
+    <div style="text-align:center;margin:12px 0;font-size:.95rem;font-weight:700;color:var(--gold)">FEE RECEIPT ${paidBadge}</div>
+    <div style="margin:12px 0;font-size:.82rem"><div style="display:flex;gap:10px;margin:4px 0"><span style="color:var(--text-light);min-width:85px">Student:</span><span style="font-weight:600">${s.name}</span></div><div style="display:flex;gap:10px;margin:4px 0"><span style="color:var(--text-light);min-width:85px">Roll No:</span><span style="font-weight:600">${s.rollNumber}</span></div><div style="display:flex;gap:10px;margin:4px 0"><span style="color:var(--text-light);min-width:85px">Class:</span><span style="font-weight:600">Class ${s.class}</span></div><div style="display:flex;gap:10px;margin:4px 0"><span style="color:var(--text-light);min-width:85px">Parent:</span><span style="font-weight:600">${s.parentName}</span></div><div style="display:flex;gap:10px;margin:4px 0"><span style="color:var(--text-light);min-width:85px">Phone:</span><span style="font-weight:600">${s.phoneNumber}</span></div><div style="display:flex;gap:10px;margin:4px 0"><span style="color:var(--text-light);min-width:85px">Period:</span><span style="font-weight:600">${MO[mo]} ${yr}</span></div></div>
+    <div style="margin:16px 0;padding:12px;background:var(--navy);color:#fff;border-radius:6px;display:flex;justify-content:space-between;align-items:center"><span style="font-size:.78rem">TOTAL AMOUNT</span><span style="font-family:'Playfair Display',serif;font-size:1.3rem;font-weight:800;color:var(--gold-light)">₹${tot.toLocaleString('en-IN')}</span></div>
+    <div style="text-align:center;font-size:.72rem;color:var(--text-light);margin-top:12px">Thank you. Central Public School</div>
+  </div>`;
+}
+
+function saveBill(){
+  if(!cb.student){toast('Select a student first','err');return;}
+  const s=cb.student,mo=parseInt(document.getElementById('bMo').value),yr=parseInt(document.getElementById('bYr').value),tot=cb.items.reduce((a,b)=>a+b.price,0);
+  db.bills=db.bills.filter(b=>!(b.studentId===s.id&&b.month===mo&&b.year===yr));
+  db.bills.push({id:Date.now(),studentId:s.id,studentName:s.name,studentClass:s.class,rollNumber:s.rollNumber,parentName:s.parentName,phone:s.phoneNumber,month:mo,year:yr,total:tot,items:[...cb.items],createdAt:Date.now(),session:s.session,paid:true});
+  sv();renderDash();renderHist();updBP();toast('Bill saved as PAID for '+s.name,'suc');
+}
+
+function printBill(){
+  if(!cb.student){toast('Generate bill first','err');return;}
+  const b=document.getElementById('pbill');if(!b){toast('Error','err');return;}
+  const pr=document.getElementById('pr');pr.innerHTML=b.outerHTML;pr.style.display='block';window.print();pr.style.display='none';pr.innerHTML='';
+}
+
+function sendBillSMS(){
+  if(!cb.student){toast('Generate bill first','err');return;}
+  const s=cb.student,mo=parseInt(document.getElementById('bMo').value),yr=parseInt(document.getElementById('bYr').value),tot=cb.items.reduce((a,b)=>a+b.price,0);
+  const msg=`Dear ${s.parentName}, fee bill for ${s.name} (${s.rollNumber}) for ${MO[mo]} ${yr} is ₹${tot}. - Central Public School`;
+  alert('SMS Message (to '+s.phoneNumber+'):\n\n'+msg+'\n\nNote: Integrate with SMS gateway API in production.');
+  toast('SMS prepared for '+s.phoneNumber,'suc');
+}
+
+function renderOv(){
+  const mo=parseInt(document.getElementById('ovMo').value),yr=parseInt(document.getElementById('ovYr').value),cls=document.getElementById('ovCls').value;
+  let ss=db.students.filter(s=>s.session===db.cur);if(cls)ss=ss.filter(s=>s.class===cls);
+  const bills=db.bills.filter(b=>b.month===mo&&b.year===yr),bids=bills.map(b=>b.studentId);
+  const paid=ss.filter(s=>bids.includes(s.id)),upd=ss.filter(s=>!bids.includes(s.id));
+  let h='<div class="sdiv">Paid ('+paid.length+')</div><div class="sgrid">';
+  paid.forEach(s=>{h+=`<div style="background:#fff;border-radius:9px;border:1px solid var(--border);padding:12px;display:flex;gap:12px;align-items:center"><div style="flex:1"><div style="font-weight:700;font-size:.88rem;color:var(--navy)">${s.name} <span class="bdg bdg-c">Class ${s.class}</span></div><div style="font-size:.75rem;color:var(--text-light);margin-top:2px">Roll: ${s.rollNumber}</div></div><div style="color:var(--success);font-weight:700">PAID</div></div>`;});
+  h+='</div><div class="sdiv">Unpaid ('+upd.length+')</div><div class="sgrid">';
+  upd.forEach(s=>{h+=`<div style="background:#fff;border-radius:9px;border:1px solid var(--border);padding:12px;display:flex;gap:12px;align-items:center"><div style="flex:1"><div style="font-weight:700;font-size:.88rem;color:var(--navy)">${s.name} <span class="bdg bdg-c">Class ${s.class}</span></div><div style="font-size:.75rem;color:var(--text-light);margin-top:2px">Roll: ${s.rollNumber} · 📱 ${s.phoneNumber}</div></div><div style="display:flex;gap:4px"><button class="btn btn-g btn-xs" onclick="qkBill(${s.id})">Bill</button><button class="btn btn-i btn-xs" onclick="sendDueSMS(${s.id},${mo},${yr})">📱</button></div></div>`;});
+  h+='</div>';document.getElementById('ovList').innerHTML=h;
+}
+
+function sendDueSMS(sid,mo,yr){
+  const s=db.students.find(s=>s.id===sid);
+  if(!s)return;
+  const msg=`Dear ${s.parentName}, reminder: fee for ${s.name} (${s.rollNumber}) for ${MO[mo]} ${yr} is pending. Amount: ₹${s.monthlyFee}. Please pay at earliest. - Central Public School`;
+  alert('SMS Message (to '+s.phoneNumber+'):\n\n'+msg+'\n\nNote: Integrate with SMS gateway API in production.');
+  toast('Payment reminder sent to '+s.phoneNumber,'suc');
+}
+
+function renderHist(){
+  const srch=(document.getElementById('hSrch')?.value||'').toLowerCase();
+  const mo=parseInt(document.getElementById('hMo')?.value||'0');
+  const cls=document.getElementById('hCls')?.value||'';
+  let bills=[...db.bills].sort((a,b)=>b.createdAt-a.createdAt);
+  if(mo)bills=bills.filter(b=>b.month===mo);
+  if(cls)bills=bills.filter(b=>b.studentClass===cls);
+  if(srch)bills=bills.filter(b=>b.studentName.toLowerCase().includes(srch)||b.rollNumber.toLowerCase().includes(srch));
+  const c=document.getElementById('hList');
+  if(!bills.length){c.innerHTML='<div class="empty"><div class="ei">📂</div><h4>No bills found</h4></div>';return;}
+  c.innerHTML=bills.map(b=>`<div class="sc"><div class="av" style="background:linear-gradient(135deg,var(--success),#20c997)">₹</div><div class="sm"><h3>${b.studentName} <span class="bdg bdg-c">Class ${b.studentClass}</span> ${b.paid?'<span class="bdg bdg-paid">PAID</span>':''}</h3><div class="sub"><span>📝 ${b.rollNumber}</span><span>📅 ${MO[b.month]} ${b.year}</span><span>👪 ${b.parentName}</span></div></div><div style="text-align:right;flex-shrink:0"><div style="font-family:'Playfair Display',serif;font-size:1.2rem;font-weight:800;color:var(--navy)">₹${b.total.toLocaleString('en-IN')}</div><div style="font-size:.72rem;color:var(--text-light)">${new Date(b.createdAt).toLocaleDateString('en-IN')}</div><button class="btn btn-i btn-xs" onclick="sendBillSMSById(${b.id})" style="margin-top:4px">📱 SMS</button></div></div>`).join('');
+}
+
+function sendBillSMSById(bid){
+  const b=db.bills.find(x=>x.id===bid);
+  if(!b)return;
+  const msg=`Dear ${b.parentName}, fee bill for ${b.studentName} (${b.rollNumber}) for ${MO[b.month]} ${b.year} is ₹${b.total}${b.paid?' - Already PAID.':' - Please pay soon.'}  - Central Public School`;
+  alert('SMS Message (to '+b.phone+'):\n\n'+msg+'\n\nNote: Integrate with SMS gateway API in production.');
+  toast('SMS sent to '+b.phone,'suc');
+}
+
+// Notices
+function noticeTypeChange(){
+  const type=document.getElementById('noticeTo').value;
+  document.getElementById('noticeClassSelect').style.display=type==='class'?'block':'none';
+  document.getElementById('noticeStudentSelect').style.display=type==='select'?'block':'none';
+  if(type==='select')loadStudentCheckList();
+}
+
+function loadStudentCheckList(){
+  const list=db.students.filter(s=>s.session===db.cur);
+  document.getElementById('studentCheckList').innerHTML=list.map(s=>`<div style="padding:5px;border-bottom:1px solid var(--border)"><label style="display:flex;align-items:center;cursor:pointer"><input type="checkbox" class="stu-check" value="${s.id}"><span style="font-size:.85rem">${s.name} (${s.rollNumber}) - Class ${s.class}</span></label></div>`).join('');
+}
+
+function sendNotice(){
+  const title=document.getElementById('noticeTitle').value.trim();
+  const msg=document.getElementById('noticeMsg').value.trim();
+  const type=document.getElementById('noticeTo').value;
+  
+  if(!title||!msg){toast('Please fill title and message','err');return;}
+  
+  let recipients=[];
+  if(type==='all'){
+    recipients=db.students.filter(s=>s.session===db.cur);
+  }else if(type==='class'){
+    const cls=document.getElementById('noticeClass').value;
+    if(!cls){toast('Select a class','err');return;}
+    recipients=db.students.filter(s=>s.session===db.cur&&s.class===cls);
+  }else if(type==='select'){
+    const checked=document.querySelectorAll('.stu-check:checked');
+    if(checked.length===0){toast('Select at least one student','err');return;}
+    const ids=Array.from(checked).map(c=>parseInt(c.value));
+    recipients=db.students.filter(s=>ids.includes(s.id));
+  }
+  
+  if(recipients.length===0){toast('No recipients found','err');return;}
+  
   const notice={
-    title: noticeTitle.value,
-    message: noticeMsg.value,
-    createdAt: Date.now(),
-    session: currentSession
+    id:Date.now(),
+    title,
+    message:msg,
+    type,
+    recipientCount:recipients.length,
+    createdAt:new Date().toISOString(),
+    recipients:recipients.map(r=>({id:r.id,name:r.name,phone:r.phoneNumber}))
   };
+  
+  db.notices.push(notice);
+  sv();
+  
+  const smsMsg=`${title}\n\n${msg}\n\n- Central Public School`;
+  alert(`Notice sent to ${recipients.length} parents!\n\nSample SMS:\n${smsMsg}\n\nNote: Integrate with SMS gateway API in production.`);
+  
+  toast(`Notice sent to ${recipients.length} parents!`,'suc');
+  document.getElementById('noticeTitle').value='';
+  document.getElementById('noticeMsg').value='';
+  document.getElementById('noticeTo').value='all';
+  noticeTypeChange();
+  renderNotices();
+}
 
-  await addDoc(collection(db,"notices"),notice);
-  alert("Notice Sent");
-  await loadNotices();
-};
+function renderNotices(){
+  const list=[...db.notices].sort((a,b)=>new Date(b.createdAt)-new Date(a.createdAt));
+  const c=document.getElementById('noticeHistory');
+  if(!list.length){c.innerHTML='<div class="empty"><div class="ei">📢</div><h4>No notices yet</h4></div>';return;}
+  c.innerHTML=list.map(n=>`<div class="notice-card">
+    <h4>${n.title}</h4>
+    <div class="meta">Sent to ${n.recipientCount} parents · ${new Date(n.createdAt).toLocaleString('en-IN')}</div>
+    <div class="msg">${n.message}</div>
+  </div>`).join('');
+}
 
-/* =========================
-   🔐 CHANGE PASSWORD
-========================= */
-window.changePassword = async function(){
-  const newPass = newPassInput.value;
-  await updatePassword(auth.currentUser,newPass);
-  alert("Password updated");
-};
-/* =========================
-   🔧 MAKE UI FUNCTIONS GLOBAL
-========================= */
+function renderRpt(){
+  const date=document.getElementById('rDate')?.value,cls=document.getElementById('rCls')?.value||'';
+  if(!date){document.getElementById('rCnt').innerHTML='<div class="empty"><div class="ei">📊</div><p>Select a date</p></div>';return;}
+  const da=db.attendance[date]||{};let ss=db.students.filter(s=>s.session===db.cur);if(cls)ss=ss.filter(s=>s.class===cls);
+  const pr=ss.filter(s=>da[s.rollNumber]),ab=ss.filter(s=>!da[s.rollNumber]);
+  let h='<div class="sdiv">Present ('+pr.length+')</div><div class="agrid">';
+  pr.forEach(s=>{h+=`<div class="ac pres"><div class="an">${s.name}</div><div class="as">Roll ${s.rollNumber} · Class ${s.class}</div><div class="at">🕐 ${da[s.rollNumber].time}</div></div>`;});
+  h+='</div><div class="sdiv">Absent ('+ab.length+')</div><div class="agrid">';
+  ab.forEach(s=>{h+=`<div class="ac abs"><div class="an">${s.name}</div><div class="as">Roll ${s.rollNumber} · Class ${s.class}</div></div>`;});
+  h+='</div>';document.getElementById('rCnt').innerHTML=h;
+}
 
-window.goP = goP;
-window.swBTab = swBTab;
-window.regStudent = regStudent;
-window.clrForm = clrForm;
-window.markAtt = markAtt;
-window.renderStudents = renderStudents;
-window.delStu = delStu;
-window.qkBill = qkBill;
-window.showQR = showQR;
-window.prQR = prQR;
-window.showDownloadQR = showDownloadQR;
-window.generateQRDownload = generateQRDownload;
-window.renderAttR = renderAttR;
-window.loadBStu = loadBStu;
-window.loadSBill = loadSBill;
-window.saveBill = saveBill;
-window.printBill = printBill;
-window.sendBillSMS = sendBillSMS;
-window.renderOv = renderOv;
-window.renderHist = renderHist;
-window.sendNotice = sendNotice;
-window.renderNotices = renderNotices;
-window.renderRpt = renderRpt;
-window.showNewSession = showNewSession;
-window.createNewSession = createNewSession;
-window.changePassword = changePassword;
-window.logout = logout;
+function showNewSession(){
+  opM('newSessionM');
+}
 
+function createNewSession(){
+  const name=document.getElementById('newSessName').value.trim();
+  if(!name){toast('Enter session name','err');return;}
+  if(db.sessions.includes(name)||name===db.cur){toast('Session already exists','err');return;}
+  
+  if(!confirm(`This will archive session ${db.cur} and create new session ${name}. Continue?`))return;
+  
+  db.sessions.push(db.cur);
+  db.cur=name;
+  sv();
+  
+  document.getElementById('newSessName').value='';
+  clsM('newSessionM');
+  document.getElementById('sessTag').textContent='Session '+db.cur;
+  toast('New session created: '+name,'suc');
+  renderSess();renderDash();
+}
+
+function renderSess(){
+  const all=[...new Set([db.cur,...db.sessions,...db.students.map(s=>s.session).filter(Boolean)])].sort().reverse();
+  let h='<div style="background:linear-gradient(135deg,var(--navy),var(--royal));border-radius:12px;padding:18px 22px;color:#fff;margin-bottom:20px"><h3 style="font-family:\'Playfair Display\',serif;font-size:1rem;font-weight:800">Active: Session '+db.cur+'</h3><p style="font-size:.8rem;color:rgba(255,255,255,.7);margin-top:2px">All new registrations go to this session</p></div><div class="sgrid">';
+  all.forEach(sess=>{
+    const ss=db.students.filter(s=>s.session===sess),bs=db.bills.filter(b=>b.session===sess),col=bs.reduce((a,b)=>a+b.total,0);
+    h+=`<div class="card"><div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px"><div><div style="font-family:'Playfair Display',serif;font-size:1.15rem;font-weight:800;color:var(--navy)">Session ${sess}</div>${sess===db.cur?'<span class="bdg" style="background:rgba(45,155,90,.12);color:var(--success);margin-top:3px">● Active</span>':'<span class="bdg" style="background:var(--cream);color:var(--text-mid);border:1px solid var(--border);margin-top:3px">Archived</span>'}</div><div style="text-align:right"><div style="font-size:.72rem;color:var(--text-light)">Collected</div><div style="font-family:'Playfair Display',serif;font-size:1.05rem;font-weight:800;color:var(--navy)">₹${col.toLocaleString('en-IN')}</div></div></div><div style="display:flex;gap:20px">${[[ss.length,'Students'],[bs.length,'Bills'],[...new Set(ss.map(s=>s.class))].length,'Classes'].map(([v,l])=>`<div><div style="font-size:1.4rem;font-weight:800;color:var(--navy)">${v}</div><div style="font-size:.72rem;color:var(--text-light)">${l}</div></div>`).join('')}</div></div>`;
+  });
+  h+='</div>';document.getElementById('sessList').innerHTML=h;
+}
 </script>
-
 </body>
 </html>
