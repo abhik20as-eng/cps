@@ -1,1064 +1,684 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Central Public School — Management System</title>
-<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700;900&family=DM+Sans:ital,wght@0,300;0,400;0,500;0,600;1,400&display=swap" rel="stylesheet">
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Central Public School — Management</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcode.js/1.0.0/qrcode.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;800;900&family=DM+Sans:wght@300;400;500;600;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
 <style>
-:root{
-  --ink:#1a1a2e;--deep:#16213e;--royal:#0f3460;
-  --gold:#e8b84b;--gold-light:#f5d98b;--gold-dim:rgba(232,184,75,0.15);
-  --white:#fff;--cream:#fdf6e3;
-  --ok:#2ecc71;--err:#e74c3c;--warn:#f39c12;--info:#3498db;
-  --border:rgba(232,184,75,0.18);--card:rgba(255,255,255,0.04);
-  --muted:rgba(255,255,255,0.45);--radius:12px;
-}
-*{margin:0;padding:0;box-sizing:border-box}
-body{font-family:'DM Sans',sans-serif;background:var(--ink);color:var(--white);min-height:100vh;
-  background-image:radial-gradient(ellipse at 15% 50%,rgba(15,52,96,.55) 0%,transparent 60%),
-                   radial-gradient(ellipse at 85% 15%,rgba(232,184,75,.07) 0%,transparent 50%)}
-::-webkit-scrollbar{width:5px;height:5px}
-::-webkit-scrollbar-track{background:var(--deep)}
-::-webkit-scrollbar-thumb{background:var(--gold);border-radius:3px}
-
-/* ── HEADER ── */
-.hdr{background:linear-gradient(135deg,var(--deep),var(--royal));border-bottom:1px solid var(--border);
-  padding:0 32px;display:flex;align-items:center;justify-content:space-between;gap:16px;
-  position:sticky;top:0;z-index:100;box-shadow:0 4px 30px rgba(0,0,0,.35)}
-.hdr-logo{display:flex;align-items:center;gap:14px;padding:12px 0}
-.hdr-icon{width:50px;height:50px;border-radius:50%;background:linear-gradient(135deg,var(--gold),#c9952e);
-  display:flex;align-items:center;justify-content:center;font-size:22px;flex-shrink:0;
-  box-shadow:0 0 18px rgba(232,184,75,.4)}
-.hdr-title h1{font-family:'Playfair Display',serif;font-size:1.35em;color:var(--gold);line-height:1.2}
-.hdr-title p{font-size:.73em;color:var(--muted);letter-spacing:.05em}
-.session-pill{background:rgba(232,184,75,.12);border:1px solid var(--gold);color:var(--gold);
-  padding:5px 14px;border-radius:20px;font-size:.78em;font-weight:600;
-  display:flex;align-items:center;gap:7px}
-.dot{width:8px;height:8px;background:var(--ok);border-radius:50%;animation:pulse 2s infinite}
-@keyframes pulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.5;transform:scale(.8)}}
-
-/* ── TABS ── */
-.nav-tabs{display:flex;background:var(--deep);border-bottom:1px solid var(--border);
-  overflow-x:auto;padding:0 20px;gap:2px}
-.ntab{padding:13px 20px;background:none;border:none;color:var(--muted);
-  font-family:'DM Sans',sans-serif;font-size:.88em;font-weight:500;cursor:pointer;
-  border-bottom:3px solid transparent;white-space:nowrap;transition:all .2s;
-  display:flex;align-items:center;gap:7px}
-.ntab:hover{color:var(--white)}
-.ntab.active{color:var(--gold);border-bottom-color:var(--gold)}
-
-/* ── LAYOUT ── */
-.main{max-width:1380px;margin:0 auto;padding:28px 22px}
-.panel{display:none;animation:fadeUp .3s ease}
-.panel.active{display:block}
-@keyframes fadeUp{from{opacity:0;transform:translateY(7px)}to{opacity:1;transform:translateY(0)}}
-
-/* ── TYPOGRAPHY ── */
-.sec-title{font-family:'Playfair Display',serif;font-size:1.75em;color:var(--white);
-  margin-bottom:6px;display:flex;align-items:center;gap:11px}
-.sec-sub{color:var(--muted);font-size:.88em;margin-bottom:26px}
-
-/* ── CARD ── */
-.card{background:linear-gradient(135deg,rgba(22,33,62,.92),rgba(15,52,96,.38));
-  border:1px solid var(--border);border-radius:var(--radius);padding:26px;backdrop-filter:blur(8px)}
-
-/* ── GRID ── */
-.g2{display:grid;grid-template-columns:1fr 1fr;gap:18px}
-.g3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:18px}
-.g4{display:grid;grid-template-columns:repeat(4,1fr);gap:15px}
-@media(max-width:900px){.g2,.g3,.g4{grid-template-columns:1fr}}
-@media(max-width:1100px){.g4{grid-template-columns:1fr 1fr}.g3{grid-template-columns:1fr 1fr}}
-
-/* ── FORMS ── */
-.fg{margin-bottom:17px}
-.fg label{display:block;margin-bottom:5px;font-size:.8em;font-weight:600;
-  color:var(--gold-light);letter-spacing:.05em;text-transform:uppercase}
-.fc{width:100%;padding:11px 15px;background:rgba(255,255,255,.07);
-  border:1px solid rgba(255,255,255,.11);border-radius:8px;
-  color:var(--white);font-family:'DM Sans',sans-serif;font-size:.93em;transition:all .2s}
-.fc:focus{outline:none;border-color:var(--gold);background:rgba(232,184,75,.08);
-  box-shadow:0 0 0 3px rgba(232,184,75,.1)}
-.fc option{background:var(--deep);color:var(--white)}
-.frow{display:grid;grid-template-columns:1fr 1fr;gap:15px}
-@media(max-width:680px){.frow{grid-template-columns:1fr}}
-
-/* ── BUTTONS ── */
-.btn{padding:10px 21px;border:none;border-radius:8px;font-family:'DM Sans',sans-serif;
-  font-size:.88em;font-weight:600;cursor:pointer;transition:all .2s;
-  display:inline-flex;align-items:center;gap:7px;letter-spacing:.02em}
-.btn-gold{background:linear-gradient(135deg,var(--gold),#c9952e);color:var(--ink)}
-.btn-gold:hover{transform:translateY(-1px);box-shadow:0 8px 20px rgba(232,184,75,.4)}
-.btn-ghost{background:transparent;border:1px solid var(--border);color:var(--white)}
-.btn-ghost:hover{background:rgba(255,255,255,.08);border-color:rgba(255,255,255,.22)}
-.btn-ok{background:var(--ok);color:#fff}.btn-err{background:var(--err);color:#fff}
-.btn-info{background:var(--info);color:#fff}
-.btn-sm{padding:6px 13px;font-size:.79em}
-.brow{display:flex;gap:9px;flex-wrap:wrap;margin-top:18px}
-
-/* ── STAT CARDS ── */
-.sc{background:linear-gradient(135deg,rgba(22,33,62,.95),rgba(15,52,96,.6));
-  border:1px solid var(--border);border-radius:var(--radius);padding:20px}
-.sc.gold{border-color:rgba(232,184,75,.45);background:linear-gradient(135deg,rgba(232,184,75,.13),rgba(201,149,46,.06))}
-.sc.green{border-color:rgba(46,204,113,.38);background:linear-gradient(135deg,rgba(46,204,113,.1),rgba(46,204,113,.04))}
-.sc.red{border-color:rgba(231,76,60,.38);background:linear-gradient(135deg,rgba(231,76,60,.1),rgba(231,76,60,.04))}
-.sc.blue{border-color:rgba(52,152,219,.38);background:linear-gradient(135deg,rgba(52,152,219,.1),rgba(52,152,219,.04))}
-.sc-num{font-family:'Playfair Display',serif;font-size:2.3em;font-weight:700;color:var(--white)}
-.sc-lbl{font-size:.79em;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;margin-top:4px}
-
-/* ── STUDENT CARD ── */
-.stud-card{background:rgba(255,255,255,.04);border:1px solid var(--border);
-  border-radius:var(--radius);padding:16px 20px;
-  display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap;
-  transition:all .2s;margin-bottom:9px}
-.stud-card:hover{background:rgba(232,184,75,.06);border-color:rgba(232,184,75,.3)}
-.stud-av{width:44px;height:44px;border-radius:50%;
-  background:linear-gradient(135deg,var(--gold),#c9952e);
-  display:flex;align-items:center;justify-content:center;
-  font-family:'Playfair Display',serif;font-size:1.15em;color:var(--ink);font-weight:700;flex-shrink:0}
-.stud-meta{flex:1;min-width:190px}
-.stud-meta h3{font-size:.97em;font-weight:600;color:var(--white);margin-bottom:3px}
-.stud-meta p{font-size:.78em;color:var(--muted)}
-.ab{padding:3px 10px;border-radius:20px;font-size:.73em;font-weight:600;
-  background:rgba(46,204,113,.14);color:var(--ok);border:1px solid rgba(46,204,113,.3)}
-.ab.low{background:rgba(231,76,60,.14);color:var(--err);border-color:rgba(231,76,60,.3)}
-
-/* ── MODAL ── */
-.moverlay{position:fixed;inset:0;background:rgba(0,0,0,.86);
-  display:none;align-items:center;justify-content:center;
-  z-index:9000;padding:20px;backdrop-filter:blur(5px)}
-.moverlay.open{display:flex}
-.mbox{background:linear-gradient(135deg,#1a1a2e,#16213e);
-  border:1px solid var(--border);border-radius:16px;
-  max-width:660px;width:100%;max-height:92vh;overflow-y:auto;
-  box-shadow:0 24px 60px rgba(0,0,0,.5);animation:mIn .28s ease}
-@keyframes mIn{from{opacity:0;transform:scale(.95)}to{opacity:1;transform:scale(1)}}
-.mhead{padding:22px 26px 16px;border-bottom:1px solid var(--border);
-  display:flex;align-items:center;justify-content:space-between}
-.mhead h2{font-family:'Playfair Display',serif;font-size:1.35em;color:var(--gold)}
-.mclose{width:31px;height:31px;border:none;background:rgba(255,255,255,.1);
-  color:var(--white);border-radius:50%;cursor:pointer;font-size:1em;
-  display:flex;align-items:center;justify-content:center;transition:background .2s}
-.mclose:hover{background:var(--err)}
-.mbody{padding:22px 26px}
-
-/* ── QR ── */
-.qr-wrap{display:flex;flex-direction:column;align-items:center;gap:14px;
-  background:var(--white);border-radius:12px;padding:22px;margin:10px 0}
-.qr-info{background:rgba(232,184,75,.08);border:1px solid var(--border);
-  border-radius:8px;padding:11px 15px;font-size:.83em;
-  color:var(--gold-light);word-break:break-all;font-family:monospace;margin-top:8px}
-
-/* ── CHAT BILL ── */
-.chatbox{background:rgba(0,0,0,.3);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden}
-.chat-msgs{height:220px;overflow-y:auto;padding:15px;display:flex;flex-direction:column;gap:9px}
-.msg{padding:9px 13px;border-radius:8px;font-size:.86em;max-width:82%}
-.msg-u{background:var(--gold);color:var(--ink);align-self:flex-end;font-weight:500}
-.msg-b{background:rgba(255,255,255,.08);border:1px solid var(--border)}
-.chat-foot{display:flex;gap:9px;padding:11px;border-top:1px solid var(--border)}
-.chat-foot input{flex:1}
-
-/* ── BILL PRINT ── */
-.bill-print{background:#fff;color:#1a1a2e;border-radius:12px;padding:30px;margin-top:18px;
-  font-family:'DM Sans',sans-serif;border:2px solid rgba(232,184,75,.35)}
-.bp-head{text-align:center;border-bottom:3px double #1a1a2e;padding-bottom:18px;margin-bottom:18px}
-.bp-head h2{font-family:'Playfair Display',serif;font-size:1.75em;color:#1a1a2e}
-.bp-head p{font-size:.83em;color:#666}
-.bp-row{display:flex;justify-content:space-between;padding:7px 0;border-bottom:1px solid #eee}
-.bp-total{display:flex;justify-content:space-between;font-size:1.25em;font-weight:700;
-  padding:15px 0;border-top:3px double #1a1a2e;margin-top:7px}
-.bp-foot{text-align:center;margin-top:18px;font-size:.78em;color:#999}
-
-/* ── ATTENDANCE ── */
-.att-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(215px,1fr));gap:11px;margin-top:14px}
-.att-card{background:rgba(46,204,113,.07);border:1px solid rgba(46,204,113,.22);border-radius:10px;padding:13px}
-.att-card.absent{background:rgba(231,76,60,.07);border-color:rgba(231,76,60,.22)}
-.att-card h4{font-size:.88em;margin-bottom:4px;color:var(--white)}
-.att-card p{font-size:.77em;color:var(--muted)}
-
-/* ── BILL HISTORY PANEL ── */
-.bh-panel{position:fixed;right:-430px;top:0;bottom:0;width:420px;
-  background:linear-gradient(160deg,#1a1a2e,#0f3460);
-  border-left:1px solid var(--border);z-index:200;
-  transition:right .35s cubic-bezier(.4,0,.2,1);
-  display:flex;flex-direction:column;box-shadow:-12px 0 40px rgba(0,0,0,.5)}
-.bh-panel.open{right:0}
-.bh-head{padding:18px 22px;border-bottom:1px solid var(--border);
-  display:flex;align-items:center;justify-content:space-between;background:rgba(0,0,0,.2)}
-.bh-head h2{font-family:'Playfair Display',serif;font-size:1.2em;color:var(--gold)}
-.bh-x{background:none;border:none;color:var(--muted);font-size:1.3em;cursor:pointer}
-.bh-x:hover{color:var(--white)}
-.bh-filters{padding:14px 18px;border-bottom:1px solid var(--border);display:flex;gap:9px;flex-wrap:wrap}
-.bh-content{flex:1;overflow-y:auto;padding:14px 18px}
-.bh-month{margin-bottom:18px}
-.bh-month-lbl{font-size:.77em;text-transform:uppercase;letter-spacing:.1em;
-  color:var(--gold);font-weight:700;margin-bottom:9px;padding-bottom:5px;border-bottom:1px solid var(--border)}
-.bh-bc{background:rgba(255,255,255,.05);border:1px solid var(--border);
-  border-radius:8px;padding:11px 13px;margin-bottom:7px;
-  display:flex;justify-content:space-between;align-items:flex-start;gap:9px}
-.bh-bc.paid{border-left:3px solid var(--ok)}
-.bh-bi h4{font-size:.88em;color:var(--white);margin-bottom:2px}
-.bh-bi p{font-size:.76em;color:var(--muted)}
-.bh-date{font-size:.7em;color:var(--muted);margin-top:2px}
-.bh-prbtn{background:rgba(232,184,75,.14);border:1px solid rgba(232,184,75,.28);
-  color:var(--gold);border-radius:5px;padding:3px 9px;font-size:.73em;cursor:pointer;margin-top:5px}
-.bh-prbtn:hover{background:rgba(232,184,75,.28)}
-.bh-sum{padding:14px 18px;border-top:1px solid var(--border);background:rgba(0,0,0,.2)}
-.bh-sr{display:flex;justify-content:space-between;font-size:.83em;margin-bottom:5px}
-.bh-st{display:flex;justify-content:space-between;font-weight:700;font-size:1.03em;
-  color:var(--gold);padding-top:7px;border-top:1px solid var(--border)}
-.bh-btn{position:fixed;right:22px;top:50%;transform:translateY(-50%);z-index:199;
-  background:linear-gradient(135deg,var(--gold),#c9952e);color:var(--ink);border:none;
-  width:50px;height:50px;border-radius:50%;font-size:1.4em;cursor:pointer;
-  box-shadow:0 8px 24px rgba(232,184,75,.42);display:flex;align-items:center;justify-content:center;
-  transition:all .2s}
-.bh-btn:hover{transform:translateY(-50%) scale(1.1)}
-.bh-btn.open{right:442px}
-
-/* ── SCANNER ── */
-.scan-wrap{background:rgba(0,0,0,.3);border:2px dashed var(--border);
-  border-radius:16px;padding:38px;text-align:center;margin-bottom:22px}
-.scan-in{font-size:1.3em;width:100%;max-width:380px;margin:14px auto;display:block;
-  background:rgba(255,255,255,.06);border:2px solid var(--gold);
-  border-radius:10px;padding:13px 18px;color:var(--white);
-  font-family:'DM Sans',sans-serif;text-align:center;letter-spacing:.08em}
-.scan-in:focus{outline:none;box-shadow:0 0 0 3px rgba(232,184,75,.22)}
-
-/* ── MONEY TABLE ── */
-.mt{width:100%;border-collapse:collapse;margin-top:15px}
-.mt th{padding:9px 15px;background:rgba(232,184,75,.1);text-align:left;
-  font-size:.8em;color:var(--gold);letter-spacing:.06em;text-transform:uppercase}
-.mt td{padding:9px 15px;border-bottom:1px solid var(--border);font-size:.86em;color:var(--white)}
-.mt tr:hover td{background:rgba(255,255,255,.03)}
-.mt .tr-tot td{font-weight:700;color:var(--gold);border-top:2px solid var(--border)}
-
-/* ── CHECKLIST ── */
-.checklist{background:rgba(0,0,0,.2);border:1px solid var(--border);
-  border-radius:8px;max-height:290px;overflow-y:auto;padding:9px}
-.ci{display:flex;align-items:center;gap:9px;padding:8px 11px;border-radius:6px;cursor:pointer;
-  transition:background .15s;font-size:.87em}
-.ci:hover{background:rgba(255,255,255,.06)}
-.ci input{accent-color:var(--gold);width:15px;height:15px}
-
-/* ── TOAST ── */
-.toast{position:fixed;bottom:28px;left:50%;transform:translateX(-50%) translateY(90px);
-  background:var(--deep);border:1px solid var(--gold);color:var(--white);
-  padding:11px 22px;border-radius:50px;font-size:.88em;font-weight:500;
-  z-index:9999;transition:transform .3s ease;box-shadow:0 8px 28px rgba(0,0,0,.5);
-  display:flex;align-items:center;gap:9px;white-space:nowrap}
-.toast.show{transform:translateX(-50%) translateY(0)}
-
-@media print{
-  body{background:#fff!important;color:#000!important}
-  .hdr,.nav-tabs,.main>*:not(#billPrintTarget),.bh-panel,.bh-btn,.toast,
-  .moverlay,.brow,.chat-foot,.ntab{display:none!important}
-  #billPrintTarget{display:block!important;position:fixed;inset:0;background:#fff;z-index:9999;padding:30px}
-}
+:root{--navy:#0f1b2d;--deep:#1a2d4a;--royal:#1e3f6e;--gold:#c9a84c;--gold-light:#e8c96a;--cream:#faf8f3;--white:#fff;--success:#2d9b5a;--danger:#c0392b;--warning:#e67e22;--info:#2471a3;--text-dark:#0f1b2d;--text-mid:#3d5a80;--text-light:#6b8cae;--border:#dde4ed;--shadow:0 4px 24px rgba(15,27,45,.10);--shadow-lg:0 12px 48px rgba(15,27,45,.18)}
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'DM Sans',sans-serif;background:var(--cream);color:var(--text-dark);min-height:100vh}
+.hdr{background:var(--navy);color:#fff;padding:0 28px;display:flex;align-items:center;justify-content:space-between;height:68px;box-shadow:0 2px 16px rgba(15,27,45,.3);position:sticky;top:0;z-index:200}
+.logo{display:flex;align-items:center;gap:12px}
+.logo-icon{width:44px;height:44px;background:var(--gold);border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:20px}
+.logo h1{font-family:'Playfair Display',serif;font-size:1.15rem;font-weight:800;line-height:1.1}
+.logo span{font-size:.68rem;color:var(--gold-light);font-weight:400;letter-spacing:1.5px;text-transform:uppercase;display:block}
+.sess-tag{background:rgba(201,168,76,.18);border:1px solid var(--gold);color:var(--gold-light);padding:5px 12px;border-radius:20px;font-size:.75rem;font-weight:500;letter-spacing:.5px}
+.app{display:grid;grid-template-columns:210px 1fr;min-height:calc(100vh - 68px)}
+.sidebar{background:var(--navy);padding:20px 0;border-right:1px solid rgba(255,255,255,.06)}
+.nav-lbl{font-size:.62rem;font-weight:600;letter-spacing:2px;text-transform:uppercase;color:var(--text-light);padding:0 18px;margin:14px 0 6px}
+.ni{display:flex;align-items:center;gap:10px;padding:11px 18px;cursor:pointer;color:#7a9abf;font-size:.87rem;font-weight:500;border-left:3px solid transparent;transition:all .18s;user-select:none}
+.ni:hover{background:rgba(255,255,255,.05);color:#fff}
+.ni.active{color:var(--gold-light);background:rgba(201,168,76,.1);border-left-color:var(--gold)}
+.ni-ic{font-size:1rem;width:20px;text-align:center}
+.mc{padding:28px;overflow-y:auto}
+.page{display:none}.page.active{display:block}
+.ph{margin-bottom:24px}
+.ph h2{font-family:'Playfair Display',serif;font-size:1.75rem;font-weight:800;color:var(--navy)}
+.ph p{color:var(--text-light);font-size:.87rem;margin-top:3px}
+.card{background:#fff;border-radius:12px;padding:22px;box-shadow:var(--shadow);border:1px solid var(--border)}
+.ct{font-size:.95rem;font-weight:600;color:var(--navy);margin-bottom:16px;display:flex;align-items:center;gap:7px}
+.fr{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.fg{margin-bottom:16px}
+.fg label{display:block;margin-bottom:5px;font-size:.75rem;font-weight:600;color:var(--text-mid);text-transform:uppercase;letter-spacing:.5px}
+.fg input,.fg select,.fg textarea{width:100%;padding:10px 12px;border:1.5px solid var(--border);border-radius:8px;font-size:.9rem;font-family:'DM Sans',sans-serif;color:var(--text-dark);background:#fff;transition:all .2s;outline:none}
+.fg input:focus,.fg select:focus,.fg textarea:focus{border-color:var(--royal);box-shadow:0 0 0 3px rgba(30,63,110,.08)}
+.btn{display:inline-flex;align-items:center;gap:6px;padding:9px 18px;border:none;border-radius:8px;cursor:pointer;font-size:.85rem;font-weight:600;font-family:'DM Sans',sans-serif;transition:all .18s}
+.btn-p{background:var(--royal);color:#fff}.btn-p:hover{background:var(--deep);transform:translateY(-1px);box-shadow:0 4px 12px rgba(30,63,110,.3)}
+.btn-g{background:var(--gold);color:var(--navy)}.btn-g:hover{background:var(--gold-light);transform:translateY(-1px)}
+.btn-s{background:var(--success);color:#fff}.btn-s:hover{background:#23844a;transform:translateY(-1px)}
+.btn-d{background:var(--danger);color:#fff}.btn-d:hover{background:#a93226;transform:translateY(-1px)}
+.btn-i{background:var(--info);color:#fff}.btn-i:hover{background:#1a5f88;transform:translateY(-1px)}
+.btn-o{background:transparent;border:1.5px solid var(--border);color:var(--text-mid)}.btn-o:hover{border-color:var(--royal);color:var(--royal)}
+.btn-sm{padding:6px 12px;font-size:.78rem;border-radius:7px}
+.btn-xs{padding:4px 10px;font-size:.73rem;border-radius:6px}
+.btn-upg{background:var(--gold);color:var(--navy);border:none;cursor:pointer;padding:7px 15px;border-radius:7px;font-size:.78rem;font-weight:600;font-family:'DM Sans',sans-serif;transition:all .2s;margin-left:8px}
+.btn-upg:hover{background:var(--gold-light)}
+.srow{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:24px}
+.sbox{background:#fff;border-radius:12px;padding:18px 20px;border:1px solid var(--border);box-shadow:var(--shadow)}
+.snum{font-family:'Playfair Display',serif;font-size:2rem;font-weight:800;color:var(--navy);line-height:1}
+.slbl{font-size:.75rem;color:var(--text-light);margin-top:3px;font-weight:500}
+.sic{width:38px;height:38px;border-radius:9px;display:flex;align-items:center;justify-content:center;font-size:1.1rem;margin-bottom:10px}
+.si-b{background:rgba(30,63,110,.1)}.si-g{background:rgba(45,155,90,.1)}.si-r{background:rgba(192,57,43,.1)}.si-gold{background:rgba(201,168,76,.15)}
+.sgrid{display:grid;gap:12px}
+.sc{background:#fff;border-radius:11px;border:1px solid var(--border);padding:16px 18px;display:flex;align-items:center;gap:16px;box-shadow:var(--shadow);transition:all .18s}
+.sc:hover{box-shadow:var(--shadow-lg);transform:translateY(-1px)}
+.av{width:46px;height:46px;border-radius:11px;background:linear-gradient(135deg,var(--royal),var(--deep));display:flex;align-items:center;justify-content:center;color:#fff;font-size:1.1rem;font-weight:700;font-family:'Playfair Display',serif;flex-shrink:0}
+.sm{flex:1;min-width:0}
+.sm h3{font-size:.93rem;font-weight:700;color:var(--navy)}
+.sm .sub{font-size:.77rem;color:var(--text-light);margin-top:3px;display:flex;gap:12px;flex-wrap:wrap}
+.bdg{display:inline-flex;align-items:center;padding:2px 8px;border-radius:20px;font-size:.7rem;font-weight:600}
+.bdg-c{background:rgba(30,63,110,.1);color:var(--royal)}
+.bdg-s{background:rgba(201,168,76,.15);color:#9a6f00}
+.sa{display:flex;gap:6px;flex-wrap:wrap;flex-shrink:0}
+.fbar{display:flex;gap:10px;margin-bottom:16px;flex-wrap:wrap;align-items:flex-end}
+.fbar .fg{margin-bottom:0;min-width:140px;flex:1}
+.sb{position:relative;flex:2}
+.sb input{padding-left:38px!important;width:100%;padding:10px 12px;border:1.5px solid var(--border);border-radius:8px;font-size:.9rem;font-family:'DM Sans',sans-serif;color:var(--text-dark);background:#fff;transition:all .2s;outline:none}
+.sb input:focus{border-color:var(--royal);box-shadow:0 0 0 3px rgba(30,63,110,.08)}
+.si{position:absolute;left:12px;top:50%;transform:translateY(-50%);color:var(--text-light);pointer-events:none}
+.modal{position:fixed;inset:0;background:rgba(10,18,30,.75);display:none;align-items:center;justify-content:center;z-index:1000;padding:20px;backdrop-filter:blur(4px)}
+.modal.open{display:flex}
+.mbox{background:#fff;border-radius:16px;padding:28px;max-width:560px;width:100%;max-height:90vh;overflow-y:auto;box-shadow:0 24px 80px rgba(10,18,30,.35);animation:mIn .2s ease}
+.mbox.mw{max-width:860px}
+@keyframes mIn{from{opacity:0;transform:scale(.96) translateY(10px)}to{opacity:1;transform:scale(1) translateY(0)}}
+.mhdr{display:flex;align-items:center;justify-content:space-between;margin-bottom:22px;padding-bottom:14px;border-bottom:1px solid var(--border)}
+.mhdr h3{font-family:'Playfair Display',serif;font-size:1.3rem;font-weight:800;color:var(--navy)}
+.mcl{width:34px;height:34px;border-radius:7px;background:var(--cream);border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:1rem;color:var(--text-light);transition:all .2s}
+.mcl:hover{background:#ffe0dd;color:var(--danger)}
+.sin-w{position:relative;margin:18px 0}
+.sin-w input{width:100%;padding:14px 18px;font-size:1.05rem;font-family:'DM Mono',monospace;border:2.5px solid var(--royal);border-radius:11px;outline:none;color:var(--navy);transition:all .2s}
+.sin-w input:focus{box-shadow:0 0 0 4px rgba(30,63,110,.12)}
+.sfeed{padding:12px 16px;border-radius:9px;margin-top:14px;font-size:.92rem;font-weight:500;min-height:54px;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:4px}
+.sfeed.suc{background:rgba(45,155,90,.1);color:var(--success);border:1px solid rgba(45,155,90,.25)}
+.sfeed.err{background:rgba(192,57,43,.1);color:var(--danger);border:1px solid rgba(192,57,43,.2)}
+.sfeed.wrn{background:rgba(230,126,34,.1);color:var(--warning);border:1px solid rgba(230,126,34,.2)}
+.agrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:10px}
+.ac{padding:11px 14px;border-radius:9px;border:1px solid;display:flex;flex-direction:column;gap:3px}
+.ac.pres{background:rgba(45,155,90,.07);border-color:rgba(45,155,90,.25)}
+.ac.abs{background:rgba(192,57,43,.05);border-color:rgba(192,57,43,.18)}
+.an{font-weight:700;font-size:.87rem;color:var(--navy)}
+.as{font-size:.75rem;color:var(--text-light)}
+.at{font-family:'DM Mono',monospace;font-size:.77rem;color:var(--text-mid)}
+.bpaper{background:#fff;border:2px solid var(--navy);border-radius:4px;padding:32px 28px;max-width:600px;margin:0 auto;font-size:.88rem}
+.bsn{font-family:'Playfair Display',serif;font-size:1.4rem;font-weight:900;color:var(--navy);text-align:center}
+.btag{text-align:center;font-size:.75rem;color:var(--text-light);margin-top:2px}
+.brl{text-align:center;margin:10px 0;font-size:.95rem;font-weight:700;letter-spacing:3px;text-transform:uppercase;color:var(--gold);border-top:2px solid var(--navy);border-bottom:1px solid var(--border);padding:7px 0}
+.bmeta{display:grid;grid-template-columns:1fr 1fr;gap:5px 18px;margin:14px 0}
+.bmr{display:flex;gap:6px;font-size:.82rem}
+.bmr span:first-child{color:var(--text-light);min-width:85px}
+.bmr span:last-child{font-weight:600;color:var(--navy)}
+.btbl{width:100%;border-collapse:collapse;margin:14px 0}
+.btbl th{background:var(--navy);color:#fff;padding:8px 10px;text-align:left;font-size:.79rem;letter-spacing:.5px}
+.btbl td{padding:8px 10px;border-bottom:1px solid var(--border);font-size:.85rem}
+.btbl tr:last-child td{border-bottom:none}
+.btr{display:flex;justify-content:flex-end;margin-top:6px}
+.btb{background:var(--navy);color:#fff;padding:10px 18px;border-radius:7px;display:flex;gap:18px;align-items:center}
+.tlbl{font-size:.78rem;opacity:.75}
+.tval{font-family:'Playfair Display',serif;font-size:1.3rem;font-weight:800;color:var(--gold-light)}
+.bft{text-align:center;margin-top:20px;padding-top:14px;border-top:1px dashed var(--border);font-size:.75rem;color:var(--text-light)}
+.tpills{display:flex;gap:5px;margin-bottom:20px;flex-wrap:wrap}
+.tp{padding:7px 16px;border-radius:20px;font-size:.8rem;font-weight:600;cursor:pointer;border:1.5px solid var(--border);color:var(--text-mid);background:#fff;transition:all .18s;font-family:'DM Sans',sans-serif}
+.tp.active{background:var(--royal);color:#fff;border-color:var(--royal)}
+.tp:hover:not(.active){border-color:var(--royal);color:var(--royal)}
+.stab{display:none}.stab.active{display:block}
+.sdiv{display:flex;align-items:center;gap:10px;color:var(--text-light);font-size:.75rem;font-weight:600;text-transform:uppercase;letter-spacing:1px;margin:20px 0 14px}
+.sdiv::before,.sdiv::after{content:'';flex:1;height:1px;background:var(--border)}
+.crow{display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap;margin-bottom:16px}
+.crow .fg{margin-bottom:0;min-width:150px}
+.twrap{position:fixed;bottom:24px;right:24px;z-index:3000;display:flex;flex-direction:column;gap:8px}
+.toast{background:var(--navy);color:#fff;padding:11px 18px;border-radius:9px;font-size:.85rem;font-weight:500;box-shadow:var(--shadow-lg);animation:tIn .25s ease;display:flex;align-items:center;gap:9px;min-width:240px}
+@keyframes tIn{from{opacity:0;transform:translateX(28px)}to{opacity:1;transform:translateX(0)}}
+.toast.suc{border-left:4px solid var(--success)}.toast.err{border-left:4px solid var(--danger)}.toast.inf{border-left:4px solid var(--info)}
+.empty{text-align:center;padding:50px 20px;color:var(--text-light)}
+.empty .ei{font-size:2.8rem;margin-bottom:10px}
+.mbc{background:#fff;border-radius:9px;border:1px solid var(--border);padding:12px 16px;display:flex;align-items:center;gap:12px;transition:all .18s;margin-bottom:7px}
+.mbc:hover{box-shadow:var(--shadow)}
+.mbi{width:38px;height:38px;border-radius:9px;background:rgba(30,63,110,.08);display:flex;align-items:center;justify-content:center;font-size:1.1rem;flex-shrink:0}
+.mbn{font-weight:700;font-size:.88rem;color:var(--navy)}
+.mbs{font-size:.75rem;color:var(--text-light);margin-top:2px}
+.mba{font-family:'Playfair Display',serif;font-size:1.1rem;font-weight:800;color:var(--navy);text-align:right}
+.mbst{font-family:'DM Sans',sans-serif;font-size:.7rem;font-weight:600;margin-top:2px}
+.qbi{display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:8px;background:var(--cream);border:1px solid var(--border);margin-bottom:7px}
+.qbd{width:7px;height:7px;border-radius:50%;flex-shrink:0;background:var(--success)}
+.qbn{font-size:.82rem;font-weight:600;color:var(--navy)}
+.qbs{font-size:.72rem;color:var(--text-light)}
+.qbam{font-family:'DM Mono',monospace;font-size:.82rem;font-weight:600;color:var(--navy)}
+.sbann{background:linear-gradient(135deg,var(--navy),var(--royal));border-radius:12px;padding:18px 22px;color:#fff;display:flex;align-items:center;justify-content:space-between;margin-bottom:20px}
+.sbann h3{font-family:'Playfair Display',serif;font-size:1rem;font-weight:800}
+.sbann p{font-size:.8rem;color:rgba(255,255,255,.7);margin-top:2px}
+.qrc{display:inline-block;text-align:center;padding:20px 18px;border:2px solid var(--navy);border-radius:12px;background:#fff}
+.qrh{font-family:'Playfair Display',serif;font-size:.95rem;font-weight:800;color:var(--navy)}
+.qrs{font-size:.72rem;color:var(--text-light);margin:2px 0 10px}
+.qrn{font-size:.95rem;font-weight:700;color:var(--navy);margin-top:7px}
+.qrroll{font-family:'DM Mono',monospace;font-size:.8rem;color:var(--text-mid)}
+.qrib{margin-top:14px;padding:12px;background:var(--cream);border-radius:9px;border:1px solid var(--border);text-align:left;font-size:.8rem;max-width:280px;margin-left:auto;margin-right:auto}
+.qrir{display:flex;gap:7px;padding:3px 0;color:var(--text-dark)}
+.qrir span:first-child{color:var(--text-light);min-width:75px}
+.fab{background:var(--gold);color:var(--navy);border:none;width:32px;height:32px;border-radius:7px;font-size:1.3rem;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;font-weight:700;transition:all .2s;vertical-align:middle;margin-left:7px}
+.fab:hover{background:var(--gold-light);transform:scale(1.06)}
+@media print{body>*:not(#pr){display:none!important}#pr{display:block!important;position:absolute;top:0;left:0;width:100%}.np{display:none!important}}
+@media(max-width:860px){.app{grid-template-columns:1fr}.sidebar{display:flex;flex-wrap:wrap;padding:10px;gap:3px}.nav-lbl{display:none}.ni{border-left:none;border-radius:7px;padding:7px 10px;font-size:.78rem}.srow{grid-template-columns:repeat(2,1fr)}.fr{grid-template-columns:1fr}}
 </style>
 </head>
 <body>
 
-<!-- HEADER -->
 <header class="hdr">
-  <div class="hdr-logo">
-    <div class="hdr-icon">🎓</div>
-    <div class="hdr-title">
+  <div class="logo">
+    <div class="logo-icon">&#127891;</div>
+    <div>
       <h1>Central Public School</h1>
-      <p>Student & Attendance Management System</p>
+      <span>Management System</span>
     </div>
   </div>
-  <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
-    <div class="session-pill"><span class="dot"></span>Session: <span id="hdrSess">2025–26</span></div>
-    <span style="font-size:.78em;color:var(--muted)" id="hdrDate"></span>
+  <div style="display:flex;align-items:center;gap:8px">
+    <span class="sess-tag" id="sessTag">Session 2026&#8211;27</span>
+    <button class="btn-upg" onclick="showSessUpgrade()">&#8679; New Session</button>
   </div>
 </header>
 
-<!-- NAV -->
-<nav class="nav-tabs">
-  <button class="ntab active" onclick="switchTab('register',this)">📝 Register</button>
-  <button class="ntab" onclick="switchTab('students',this)">👥 Students</button>
-  <button class="ntab" onclick="switchTab('billing',this)">💰 Billing</button>
-  <button class="ntab" onclick="switchTab('attendance',this)">✅ Attendance</button>
-  <button class="ntab" onclick="switchTab('reports',this)">📊 Reports</button>
-  <button class="ntab" onclick="switchTab('sessions',this)">🗂️ Sessions</button>
-</nav>
+<div class="app">
+  <nav class="sidebar">
+    <div class="nav-lbl">Main</div>
+    <div class="ni active" onclick="goP('dashboard',this)"><span class="ni-ic">&#128202;</span> Dashboard</div>
+    <div class="ni" onclick="goP('register',this)"><span class="ni-ic">&#9998;</span> Register</div>
+    <div class="ni" onclick="goP('students',this)"><span class="ni-ic">&#128101;</span> Students</div>
+    <div class="nav-lbl">Operations</div>
+    <div class="ni" onclick="goP('attendance',this)"><span class="ni-ic">&#128203;</span> Attendance</div>
+    <div class="ni" onclick="goP('billing',this)"><span class="ni-ic">&#128179;</span> Billing</div>
+    <div class="ni" onclick="goP('reports',this)"><span class="ni-ic">&#128200;</span> Reports</div>
+    <div class="nav-lbl">Settings</div>
+    <div class="ni" onclick="goP('sessions',this)"><span class="ni-ic">&#128193;</span> Sessions</div>
+  </nav>
+  <main class="mc">
 
-<main class="main">
-
-<!-- ══ REGISTER ══ -->
-<div id="tab-register" class="panel active">
-  <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:6px">
-    <h2 class="sec-title">📝 Register New Student</h2>
-    <span style="font-size:.83em;color:var(--muted)">Session: <strong style="color:var(--gold)" id="regSess">2025–26</strong></span>
-  </div>
-  <p class="sec-sub">Add a new student to the current academic session</p>
-  <div class="card">
-    <form id="regForm" onsubmit="registerStudent(event)">
-      <div class="frow">
-        <div class="fg"><label>Student Name *</label><input type="text" id="sName" class="fc" required placeholder="Full name"></div>
-        <div class="fg"><label>Roll Number *</label><input type="text" id="sRoll" class="fc" required placeholder="e.g. A001"></div>
-      </div>
-      <div class="frow">
-        <div class="fg"><label>Date of Birth *</label><input type="date" id="sDob" class="fc" required></div>
-        <div class="fg"><label>Class *</label>
-          <select id="sClass" class="fc" required><option value="">Select Class</option>
-            <option>1</option><option>2</option><option>3</option><option>4</option><option>5</option>
-            <option>6</option><option>7</option><option>8</option><option>9</option><option>10</option>
-            <option>11</option><option>12</option></select></div>
-      </div>
-      <div class="frow">
-        <div class="fg"><label>Parent's Name *</label><input type="text" id="sParent" class="fc" required></div>
-        <div class="fg"><label>Phone Number *</label><input type="tel" id="sPhone" class="fc" pattern="[0-9]{10}" placeholder="10-digit mobile" required></div>
-      </div>
-      <div class="frow">
-        <div class="fg"><label>Date of Joining *</label><input type="date" id="sJoin" class="fc" required></div>
-        <div class="fg"><label>Monthly Fee (₹) *</label><input type="number" id="sFee" class="fc" required placeholder="0"></div>
-      </div>
-      <div class="brow">
-        <button type="submit" class="btn btn-gold">✓ Register Student</button>
-        <button type="button" class="btn btn-ghost" onclick="document.getElementById('regForm').reset()">✕ Clear</button>
-      </div>
-    </form>
-  </div>
-</div>
-
-<!-- ══ STUDENTS ══ -->
-<div id="tab-students" class="panel">
-  <h2 class="sec-title">👥 Students</h2>
-  <p class="sec-sub">All students in the current session</p>
-  <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end;margin-bottom:18px">
-    <div style="flex:1;min-width:150px">
-      <label style="font-size:.78em;color:var(--muted);display:block;margin-bottom:5px">Filter by Class</label>
-      <select id="filterClass" class="fc" onchange="displayStudents()">
-        <option value="">All Classes</option>
-        <option>1</option><option>2</option><option>3</option><option>4</option><option>5</option>
-        <option>6</option><option>7</option><option>8</option><option>9</option><option>10</option>
-        <option>11</option><option>12</option>
-      </select>
-    </div>
-    <button class="btn btn-gold" onclick="genAllQR()">🔲 All QR Codes</button>
-    <button class="btn btn-ghost" onclick="showBulkSMS()">📱 Bulk SMS</button>
-    <button class="btn btn-ghost" onclick="showSelSMS()">📩 Selective SMS</button>
-  </div>
-  <div id="studentsList"></div>
-</div>
-
-<!-- ══ BILLING ══ -->
-<div id="tab-billing" class="panel">
-  <h2 class="sec-title">💰 Billing</h2>
-  <p class="sec-sub">Generate and print fee receipts</p>
-  <div class="card" style="margin-bottom:18px">
-    <div class="frow">
-      <div class="fg"><label>Class</label>
-        <select id="billClass" class="fc" onchange="loadBillStudents()">
-          <option value="">Choose class</option>
-          <option>1</option><option>2</option><option>3</option><option>4</option><option>5</option>
-          <option>6</option><option>7</option><option>8</option><option>9</option><option>10</option>
-          <option>11</option><option>12</option>
-        </select></div>
-      <div class="fg"><label>Student</label>
-        <select id="billStudent" class="fc" onchange="startBill()"><option value="">Choose student</option></select></div>
-    </div>
-    <div class="fg"><label>Month</label>
-      <select id="billMonth" class="fc">
-        <option>April</option><option>May</option><option>June</option><option>July</option>
-        <option>August</option><option>September</option><option>October</option><option>November</option>
-        <option>December</option><option>January</option><option>February</option><option>March</option>
-      </select></div>
-  </div>
-  <div class="chatbox">
-    <div class="chat-msgs" id="chatMsgs"><div class="msg msg-b" style="color:var(--muted)">Select a student to start the bill...</div></div>
-    <div class="chat-foot">
-      <input type="text" id="chatIn" class="fc" placeholder='Item + price e.g. "Books 500"'>
-      <button class="btn btn-gold btn-sm" onclick="addItem()">＋ Add</button>
-    </div>
-  </div>
-  <div id="billPreview"></div>
-  <div class="brow" style="justify-content:center">
-    <button class="btn btn-gold" onclick="printBill()">🖨️ Print</button>
-    <button class="btn btn-ok" onclick="saveBill()">💾 Save</button>
-    <button class="btn btn-ghost" onclick="clearBill()">✕ Clear</button>
-  </div>
-</div>
-
-<!-- ══ ATTENDANCE ══ -->
-<div id="tab-attendance" class="panel">
-  <h2 class="sec-title">✅ Attendance</h2>
-  <p class="sec-sub">Mark attendance via QR scan or manual entry</p>
-  <div class="scan-wrap">
-    <div style="font-size:2.8em;margin-bottom:10px">📱</div>
-    <h3 style="color:var(--gold);font-family:'Playfair Display',serif;margin-bottom:7px">QR / Manual Entry</h3>
-    <p style="color:var(--muted);font-size:.88em">Scan QR code with any reader app, or type roll number here</p>
-    <input type="text" id="scanIn" class="scan-in" placeholder="Roll Number"
-      onkeydown="if(event.key==='Enter')markAtt()">
-    <div style="margin-top:10px">
-      <button class="btn btn-gold" onclick="markAtt()">Mark Present ✓</button>
-    </div>
-    <div id="attMsg" style="margin-top:18px;font-size:.95em"></div>
-  </div>
-  <div class="card">
-    <h3 style="color:var(--gold);font-family:'Playfair Display',serif;margin-bottom:14px">Today's Attendance</h3>
-    <div id="todayAtt"><p style="color:var(--muted);font-size:.88em;text-align:center;padding:20px">Loading...</p></div>
-  </div>
-</div>
-
-<!-- ══ REPORTS ══ -->
-<div id="tab-reports" class="panel">
-  <h2 class="sec-title">📊 Reports</h2>
-  <p class="sec-sub">Attendance and fee collection analytics</p>
-  <div style="display:flex;gap:8px;margin-bottom:22px;flex-wrap:wrap">
-    <button class="btn btn-gold btn-sm" id="rpt-att-btn" onclick="showRpt('att')">📅 Attendance</button>
-    <button class="btn btn-ghost btn-sm" id="rpt-coll-btn" onclick="showRpt('coll')">💵 Fee Collection</button>
-  </div>
-  <div id="rpt-att">
-    <div class="card" style="margin-bottom:18px">
-      <div class="frow">
-        <div class="fg"><label>Date</label><input type="date" id="rptDate" class="fc" onchange="genRpt()"></div>
-        <div class="fg"><label>Class</label>
-          <select id="rptClass" class="fc" onchange="genRpt()">
-            <option value="">All Classes</option>
-            <option>1</option><option>2</option><option>3</option><option>4</option><option>5</option>
-            <option>6</option><option>7</option><option>8</option><option>9</option><option>10</option>
-            <option>11</option><option>12</option>
-          </select></div>
+    <!-- DASHBOARD -->
+    <div id="page-dashboard" class="page active">
+      <div class="ph"><h2>Dashboard</h2><p>Central Public School overview</p></div>
+      <div class="srow" id="dStats"></div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:18px">
+        <div class="card"><div class="ct">&#128197; Today's Attendance</div><div id="dAtt"></div></div>
+        <div class="card"><div class="ct">&#128176; Recent Bills</div><div id="dBills"></div></div>
       </div>
     </div>
-    <div class="g4" id="rptStats" style="margin-bottom:18px"></div>
-    <div id="rptContent"></div>
-  </div>
-  <div id="rpt-coll" style="display:none">
-    <div class="card" style="margin-bottom:18px">
-      <div class="frow">
-        <div class="fg"><label>Month</label>
-          <select id="collMonth" class="fc" onchange="genColl()">
-            <option value="">All Months</option>
-            <option>April</option><option>May</option><option>June</option><option>July</option>
-            <option>August</option><option>September</option><option>October</option><option>November</option>
-            <option>December</option><option>January</option><option>February</option><option>March</option>
-          </select></div>
-        <div class="fg"><label>Class</label>
-          <select id="collClass" class="fc" onchange="genColl()">
-            <option value="">All Classes</option>
-            <option>1</option><option>2</option><option>3</option><option>4</option><option>5</option>
-            <option>6</option><option>7</option><option>8</option><option>9</option><option>10</option>
-            <option>11</option><option>12</option>
-          </select></div>
-      </div>
-    </div>
-    <div class="g4" id="collStats" style="margin-bottom:18px"></div>
-    <div id="collContent"></div>
-  </div>
-</div>
 
-<!-- ══ SESSIONS ══ -->
-<div id="tab-sessions" class="panel">
-  <h2 class="sec-title">🗂️ Session Management</h2>
-  <p class="sec-sub">Manage academic years and archived data</p>
-  <div class="card" style="margin-bottom:20px">
-    <h3 style="color:var(--gold);font-family:'Playfair Display',serif;margin-bottom:14px">Switch / Create Session</h3>
-    <div class="frow">
-      <div class="fg"><label>Active Session</label>
-        <select id="sesSel" class="fc" onchange="switchSession()"></select></div>
-      <div class="fg"><label>New Session</label>
-        <input type="text" id="newSessIn" class="fc" placeholder="e.g. 2027-28"></div>
-    </div>
-    <div class="brow">
-      <button class="btn btn-gold" onclick="createSession()">🆕 Create Session</button>
-    </div>
-  </div>
-  <div class="card">
-    <h3 style="color:var(--gold);font-family:'Playfair Display',serif;margin-bottom:14px">All Sessions</h3>
-    <div id="sessList"></div>
-  </div>
-</div>
-
-</main>
-
-<!-- BILL HISTORY TOGGLE -->
-<button class="bh-btn" id="bhBtn" onclick="toggleBH()" title="Bill History &amp; Records">💳</button>
-
-<!-- BILL HISTORY PANEL -->
-<aside class="bh-panel" id="bhPanel">
-  <div class="bh-head">
-    <h2>💳 Bill Records</h2>
-    <button class="bh-x" onclick="toggleBH()">✕</button>
-  </div>
-  <div class="bh-filters">
-    <select id="bhClass" class="fc" style="flex:1;min-width:90px;font-size:.82em" onchange="renderBH()">
-      <option value="">All Classes</option>
-      <option>1</option><option>2</option><option>3</option><option>4</option><option>5</option>
-      <option>6</option><option>7</option><option>8</option><option>9</option><option>10</option>
-      <option>11</option><option>12</option>
-    </select>
-    <select id="bhMon" class="fc" style="flex:1;min-width:90px;font-size:.82em" onchange="renderBH()">
-      <option value="">All Months</option>
-      <option>April</option><option>May</option><option>June</option><option>July</option>
-      <option>August</option><option>September</option><option>October</option><option>November</option>
-      <option>December</option><option>January</option><option>February</option><option>March</option>
-    </select>
-  </div>
-  <div class="bh-content" id="bhContent"></div>
-  <div class="bh-sum" id="bhSum"></div>
-</aside>
-
-<!-- MODALS -->
-<div class="moverlay" id="qrModal"><div class="mbox">
-  <div class="mhead"><h2 id="qrMTitle">QR Code</h2><button class="mclose" onclick="closeM('qrModal')">✕</button></div>
-  <div class="mbody" id="qrMBody"></div>
-</div></div>
-
-<div class="moverlay" id="smsModal"><div class="mbox">
-  <div class="mhead"><h2>📱 SMS</h2><button class="mclose" onclick="closeM('smsModal')">✕</button></div>
-  <div class="mbody" id="smsMBody"></div>
-</div></div>
-
-<!-- PRINT TARGET -->
-<div id="billPrintTarget" style="display:none"></div>
-
-<!-- TOAST -->
-<div class="toast" id="toast"></div>
-
-<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
-<script>
-const MONTHS=['April','May','June','July','August','September','October','November','December','January','February','March'];
-const BASE_URL=window.location.href.split('?')[0];
-let currentSession=localStorage.getItem('CPS_session')||'2025-26';
-let allSessions=JSON.parse(localStorage.getItem('CPS_allSessions')||'["2025-26"]');
-let students=[],attendance={},bills=[];
-let cb={student:null,items:[]};
-
-// ── data helpers ──
-function sk(k){return `CPS_${currentSession}_${k}`}
-function load(){
-  students=JSON.parse(localStorage.getItem(sk('students'))||'[]');
-  attendance=JSON.parse(localStorage.getItem(sk('attendance'))||'{}');
-  bills=JSON.parse(localStorage.getItem(sk('bills'))||'[]');
-}
-function save(k,v){localStorage.setItem(sk(k),JSON.stringify(v))}
-load();
-
-// ── init UI ──
-const NOW=new Date();
-const TODAY=NOW.toISOString().split('T')[0];
-document.getElementById('hdrDate').textContent=NOW.toLocaleDateString('en-IN',{day:'numeric',month:'long',year:'numeric'});
-document.getElementById('hdrSess').textContent=currentSession.replace('-','–');
-document.getElementById('regSess').textContent=currentSession.replace('-','–');
-if(document.getElementById('sJoin'))document.getElementById('sJoin').value=TODAY;
-if(document.getElementById('rptDate'))document.getElementById('rptDate').value=TODAY;
-// Set current month
-const CM=NOW.toLocaleString('en-IN',{month:'long'});
-const bms=document.getElementById('billMonth');
-if(bms){[...bms.options].forEach(o=>{if(o.value===CM)o.selected=true;})}
-// Init sessions selector
-initSessSel();
-
-// ── QR attendance from URL ──
-(()=>{const p=new URLSearchParams(window.location.search);const r=p.get('attendance');if(r)setTimeout(()=>qrMarkAtt(r),500)})();
-
-// ══ TOAST ══
-function toast(msg,dur=2700){
-  const t=document.getElementById('toast');
-  t.textContent=msg;t.classList.add('show');
-  setTimeout(()=>t.classList.remove('show'),dur);
-}
-
-// ══ TABS ══
-function switchTab(id,btn){
-  document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
-  document.querySelectorAll('.ntab').forEach(b=>b.classList.remove('active'));
-  document.getElementById('tab-'+id).classList.add('active');
-  if(btn)btn.classList.add('active');
-  if(id==='students')displayStudents();
-  if(id==='reports'){if(document.getElementById('rptDate').value===''||!document.getElementById('rptDate').value)document.getElementById('rptDate').value=TODAY;genRpt();}
-  if(id==='attendance')renderTodayAtt();
-  if(id==='sessions')renderSessions();
-}
-
-// ══ SESSIONS ══
-function initSessSel(){
-  const sel=document.getElementById('sesSel');
-  if(!sel)return;
-  sel.innerHTML='';
-  allSessions.forEach(s=>{const o=new Option(s.replace('-','–'),s);sel.appendChild(o);});
-  sel.value=currentSession;
-}
-function switchSession(){
-  currentSession=document.getElementById('sesSel').value;
-  localStorage.setItem('CPS_session',currentSession);
-  load();
-  document.getElementById('hdrSess').textContent=currentSession.replace('-','–');
-  document.getElementById('regSess').textContent=currentSession.replace('-','–');
-  displayStudents();renderBH();
-  toast('✅ Session '+currentSession.replace('-','–'));
-}
-function createSession(){
-  const v=document.getElementById('newSessIn').value.trim();
-  if(!v||!/^\d{4}-\d{2,4}$/.test(v)){toast('⚠️ Format: YYYY-YY e.g. 2027-28');return;}
-  if(!allSessions.includes(v)){allSessions.push(v);localStorage.setItem('CPS_allSessions',JSON.stringify(allSessions));}
-  initSessSel();
-  document.getElementById('sesSel').value=v;
-  currentSession=v;localStorage.setItem('CPS_session',v);
-  load();
-  document.getElementById('hdrSess').textContent=v.replace('-','–');
-  document.getElementById('regSess').textContent=v.replace('-','–');
-  document.getElementById('newSessIn').value='';
-  toast('🎉 Session '+v.replace('-','–')+' created!');
-  renderSessions();
-}
-function renderSessions(){
-  const c=document.getElementById('sessList');if(!c)return;
-  c.innerHTML=allSessions.map(s=>{
-    const ss=JSON.parse(localStorage.getItem(`CPS_${s}_students`)||'[]');
-    const sb=JSON.parse(localStorage.getItem(`CPS_${s}_bills`)||'[]');
-    const act=s===currentSession;
-    return`<div style="display:flex;align-items:center;justify-content:space-between;padding:13px;
-      background:${act?'rgba(232,184,75,.1)':'rgba(255,255,255,.04)'};
-      border:1px solid ${act?'rgba(232,184,75,.4)':'var(--border)'};
-      border-radius:8px;margin-bottom:8px;flex-wrap:wrap;gap:9px">
-      <div>
-        <strong style="color:${act?'var(--gold)':'var(--white)'}">${s.replace('-','–')}${act?' <span style="font-size:.72em;background:var(--gold);color:var(--ink);padding:2px 8px;border-radius:20px">Active</span>':''}</strong>
-        <p style="font-size:.78em;color:var(--muted);margin-top:3px">${ss.length} students · ${sb.length} bills · ₹${sb.reduce((a,b)=>a+b.total,0).toFixed(0)} collected</p>
-      </div>
-      <button class="btn btn-ghost btn-sm" onclick="document.getElementById('sesSel').value='${s}';switchSession()">Switch →</button>
-    </div>`;
-  }).join('');
-}
-
-// ══ REGISTER ══
-function registerStudent(e){
-  e.preventDefault();
-  const roll=document.getElementById('sRoll').value.trim();
-  if(students.find(s=>s.rollNumber===roll)){toast('⚠️ Roll number already exists!');return;}
-  const st={
-    id:Date.now(),
-    name:document.getElementById('sName').value.trim(),
-    rollNumber:roll,
-    dob:document.getElementById('sDob').value,
-    class:document.getElementById('sClass').value,
-    parentName:document.getElementById('sParent').value.trim(),
-    phoneNumber:document.getElementById('sPhone').value.trim(),
-    joiningDate:document.getElementById('sJoin').value,
-    monthlyFee:parseFloat(document.getElementById('sFee').value),
-    session:currentSession
-  };
-  students.push(st);save('students',students);
-  toast(`✅ ${st.name} registered — Class ${st.class}`);
-  document.getElementById('regForm').reset();
-  document.getElementById('sJoin').value=TODAY;
-}
-
-// ══ STUDENTS ══
-function displayStudents(){
-  const fc=document.getElementById('filterClass').value;
-  const list=fc?students.filter(s=>s.class===fc):students;
-  const c=document.getElementById('studentsList');
-  if(!list.length){c.innerHTML=`<div style="text-align:center;padding:55px;color:var(--muted)"><div style="font-size:2.8em;margin-bottom:10px">🎒</div><p>No students found</p></div>`;return;}
-  c.innerHTML=list.map(s=>{
-    const pct=getAttPct(s.rollNumber);const days=getPDays(s.rollNumber);
-    return`<div class="stud-card">
-      <div class="stud-av">${s.name.charAt(0).toUpperCase()}</div>
-      <div class="stud-meta">
-        <h3>${s.name}</h3>
-        <p>Roll: <strong style="color:var(--gold)">${s.rollNumber}</strong> · Class <strong>${s.class}</strong> · ${s.parentName} · 📞 ${s.phoneNumber}</p>
-        <p style="margin-top:2px">₹${s.monthlyFee}/mo · Joined: ${s.joiningDate}</p>
-      </div>
-      <span class="ab ${pct<75?'low':''}">${days}d (${pct}%)</span>
-      <div style="display:flex;gap:7px;flex-wrap:wrap">
-        <button class="btn btn-info btn-sm" onclick="showQR(${s.id})">🔲 QR</button>
-        <button class="btn btn-ghost btn-sm" onclick="sendSMS1(${s.id})">📱</button>
-        <button class="btn btn-err btn-sm" onclick="delStudent(${s.id})">✕</button>
-      </div>
-    </div>`;
-  }).join('');
-}
-function getAttPct(r){const d=Object.keys(attendance);if(!d.length)return 0;return Math.round(d.filter(dd=>attendance[dd][r]).length/d.length*100)}
-function getPDays(r){return Object.keys(attendance).filter(d=>attendance[d][r]).length}
-function delStudent(id){if(!confirm('Delete this student?'))return;students=students.filter(s=>s.id!==id);save('students',students);displayStudents();toast('🗑️ Deleted');}
-
-// ══ QR CODES — FIXED ══
-function showQR(id){
-  const s=students.find(x=>x.id===id);if(!s)return;
-  const url=`${BASE_URL}?attendance=${s.rollNumber}`;
-  document.getElementById('qrMTitle').textContent=s.name;
-  document.getElementById('qrMBody').innerHTML=`
-    <div style="text-align:center">
-      <div class="qr-wrap">
-        <div id="qrc" style="line-height:0"></div>
-        <div style="color:#1a1a2e;font-family:'DM Sans',sans-serif">
-          <strong>${s.name}</strong><br>
-          <span style="font-size:.85em">Roll: ${s.rollNumber} · Class ${s.class}</span>
+    <!-- REGISTER -->
+    <div id="page-register" class="page">
+      <div class="ph"><h2>Register Student <button class="fab" onclick="goP('billing',document.querySelector('[onclick*=billing]'))">+</button></h2><p>Add to current session</p></div>
+      <div style="display:grid;grid-template-columns:1fr 310px;gap:20px;align-items:start">
+        <div class="card">
+          <form id="sForm" onsubmit="regStudent(event)">
+            <div class="fr">
+              <div class="fg"><label>Student Name *</label><input id="rn" required placeholder="Full name"></div>
+              <div class="fg"><label>Roll Number *</label><input id="rr" required placeholder="e.g. CPS-001"></div>
+            </div>
+            <div class="fr">
+              <div class="fg"><label>Date of Birth *</label><input type="date" id="rd" required></div>
+              <div class="fg"><label>Class *</label><select id="rc" required><option value="">Select</option><option>1</option><option>2</option><option>3</option><option>4</option><option>5</option><option>6</option><option>7</option><option>8</option><option>9</option><option>10</option><option>11</option><option>12</option></select></div>
+            </div>
+            <div class="fr">
+              <div class="fg"><label>Parent Name *</label><input id="rp" required placeholder="Father/Mother"></div>
+              <div class="fg"><label>Phone *</label><input id="rpm" pattern="[0-9]{10}" required placeholder="10 digit mobile"></div>
+            </div>
+            <div class="fr">
+              <div class="fg"><label>Date of Joining *</label><input type="date" id="rj" required></div>
+              <div class="fg"><label>Monthly Fee (&#8377;) *</label><input type="number" id="rf" required placeholder="e.g. 1500"></div>
+            </div>
+            <div class="fg"><label>Address</label><textarea id="ra" rows="2" placeholder="Optional"></textarea></div>
+            <div style="display:flex;gap:9px;margin-top:6px">
+              <button type="submit" class="btn btn-p">&#10003; Register</button>
+              <button type="button" class="btn btn-o" onclick="clrForm()">Clear</button>
+            </div>
+          </form>
+        </div>
+        <div class="card" style="position:sticky;top:90px">
+          <div class="ct">&#128197; Recent Bills</div>
+          <div class="fg" style="margin-bottom:10px"><label>Month</label><select id="qbM" onchange="renderQB()"></select></div>
+          <div id="qbList"></div>
         </div>
       </div>
-      <div class="qr-info">🔗 ${url}</div>
-      <p style="color:var(--muted);font-size:.8em;margin:10px 0">Scan to auto-mark attendance</p>
-      <div class="brow" style="justify-content:center">
-        <button class="btn btn-gold" onclick="printQR1('${s.rollNumber}','${s.name.replace(/'/g,'`')}','${s.class}')">🖨️ Print</button>
-        <button class="btn btn-ghost" onclick="closeM('qrModal')">Close</button>
-      </div>
-    </div>`;
-  openM('qrModal');
-  // Wait for DOM, then render QR
-  requestAnimationFrame(()=>{
-    requestAnimationFrame(()=>{
-      const el=document.getElementById('qrc');
-      if(!el)return;
-      el.innerHTML='';
-      try{new QRCode(el,{text:url,width:230,height:230,colorDark:'#000000',colorLight:'#ffffff',correctLevel:QRCode.CorrectLevel.H});}
-      catch(ex){el.innerHTML='<div style="color:red;padding:20px;font-size:.85em">QR Error: '+ex.message+'</div>';}
-    });
-  });
-}
-
-function genAllQR(){
-  if(!students.length){toast('No students registered');return;}
-  document.getElementById('qrMTitle').textContent='All QR Codes';
-  document.getElementById('qrMBody').innerHTML=`
-    <div style="text-align:center;margin-bottom:18px">
-      <button class="btn btn-gold" onclick="window.print()">🖨️ Print All</button>
     </div>
-    <div id="allQRGrid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:14px">
-      ${students.map((s,i)=>`
-        <div style="background:#fff;border-radius:10px;padding:14px;text-align:center;color:#1a1a2e;break-inside:avoid">
-          <div id="aqr${i}" style="margin:0 auto 8px;line-height:0"></div>
-          <strong style="font-size:.83em;display:block">${s.name}</strong>
-          <span style="font-size:.72em;color:#666">Roll: ${s.rollNumber} · Class ${s.class}</span>
-        </div>`).join('')}
-    </div>`;
-  openM('qrModal');
-  requestAnimationFrame(()=>{
-    requestAnimationFrame(()=>{
-      students.forEach((s,i)=>{
-        const el=document.getElementById('aqr'+i);
-        if(!el)return;
-        const url=`${BASE_URL}?attendance=${s.rollNumber}`;
-        try{new QRCode(el,{text:url,width:150,height:150,colorDark:'#000000',colorLight:'#ffffff',correctLevel:QRCode.CorrectLevel.H});}
-        catch(ex){el.innerHTML='<span style="color:red;font-size:.7em">ERR</span>';}
-      });
-    });
-  });
-}
 
-function printQR1(roll,name,cls){
-  const url=`${BASE_URL}?attendance=${roll}`;
-  const w=window.open('','_blank','width=520,height=620');
-  if(!w){alert('Allow pop-ups to print QR');return;}
-  w.document.write(`<!DOCTYPE html><html><head><title>QR - ${name}</title>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"><\/script>
-  <style>body{font-family:sans-serif;text-align:center;padding:32px;background:#fff;color:#1a1a2e}
-  #qrd{display:inline-block;margin:18px auto;line-height:0}h2{font-size:1.4em;margin-bottom:4px}p{font-size:.88em;color:#666}</style>
-  </head><body>
-  <h2>Central Public School</h2><h3>${name}</h3>
-  <p>Roll: ${roll} · Class ${cls}</p>
-  <div id="qrd"></div>
-  <p style="font-size:.75em;color:#999;word-break:break-all;max-width:300px;margin:0 auto">${url}</p>
-  <script>
-  window.onload=function(){
-    new QRCode(document.getElementById('qrd'),{text:'${url}',width:256,height:256,colorDark:'#000000',colorLight:'#ffffff',correctLevel:QRCode.CorrectLevel.H});
-    setTimeout(function(){window.print();},900);
-  };
-  <\/script></body></html>`);
-}
+    <!-- STUDENTS -->
+    <div id="page-students" class="page">
+      <div class="ph" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px">
+        <div><h2>Students</h2><p><span id="scnt">0</span> total</p></div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <button class="btn btn-o btn-sm" onclick="expAllQR()">&#128248; Print All QR</button>
+          <button class="btn btn-p btn-sm" onclick="goP('register',document.querySelector('[onclick*=register]'))">+ Add</button>
+        </div>
+      </div>
+      <div class="fbar">
+        <div class="sb"><span class="si">&#128269;</span><input type="text" id="srch" placeholder="Search name, roll..." oninput="renderStudents()"></div>
+        <div class="fg"><label>Class</label><select id="fCls" onchange="renderStudents()"><option value="">All</option><option>1</option><option>2</option><option>3</option><option>4</option><option>5</option><option>6</option><option>7</option><option>8</option><option>9</option><option>10</option><option>11</option><option>12</option></select></div>
+        <div class="fg"><label>Session</label><select id="fSess" onchange="renderStudents()"><option value="">All Sessions</option></select></div>
+      </div>
+      <div id="sGrid" class="sgrid"></div>
+    </div>
 
-// ══ ATTENDANCE ══
+    <!-- ATTENDANCE -->
+    <div id="page-attendance" class="page">
+      <div class="ph"><h2>Mark Attendance</h2><p>Scan QR or enter roll number</p></div>
+      <div style="max-width:500px;margin:0 auto;text-align:center;padding:16px 0">
+        <div style="font-size:3.2rem">&#128247;</div>
+        <p style="color:var(--text-light);font-size:.88rem;margin:8px 0">Scan QR code or type roll number below</p>
+        <div class="sin-w"><input type="text" id="scanIn" placeholder="Roll Number..." onkeydown="if(event.key==='Enter')markAtt()" autocomplete="off"></div>
+        <button class="btn btn-p" style="width:100%;justify-content:center;padding:13px" onclick="markAtt()">&#10003; Mark Present</button>
+        <div id="sFeed" class="sfeed" style="display:none"></div>
+      </div>
+      <div class="sdiv">Attendance Log</div>
+      <div class="crow">
+        <div class="fg"><label>Date</label><input type="date" id="aDate" onchange="renderAttR()"></div>
+        <div class="fg"><label>Class</label><select id="aCls" onchange="renderAttR()"><option value="">All</option><option>1</option><option>2</option><option>3</option><option>4</option><option>5</option><option>6</option><option>7</option><option>8</option><option>9</option><option>10</option><option>11</option><option>12</option></select></div>
+        <button class="btn btn-o btn-sm np" onclick="window.print()" style="align-self:flex-end">&#128248; Print</button>
+      </div>
+      <div class="srow" id="aStats" style="grid-template-columns:repeat(4,1fr);margin-bottom:16px"></div>
+      <div id="aReport"></div>
+    </div>
+
+    <!-- BILLING -->
+    <div id="page-billing" class="page">
+      <div class="ph"><h2>Fee Management</h2><p>Generate, track and print bills</p></div>
+      <div class="tpills">
+        <div class="tp active" onclick="swBTab('gen',this)">&#128221; Generate Bill</div>
+        <div class="tp" onclick="swBTab('ov',this)">&#128202; Monthly Overview</div>
+        <div class="tp" onclick="swBTab('hist',this)">&#128194; Bill History</div>
+      </div>
+      <div id="bt-gen" class="stab active">
+        <div class="fr" style="margin-bottom:0">
+          <div class="fg"><label>Select Class</label><select id="bCls" onchange="loadBStu()"><option value="">Choose class</option><option>1</option><option>2</option><option>3</option><option>4</option><option>5</option><option>6</option><option>7</option><option>8</option><option>9</option><option>10</option><option>11</option><option>12</option></select></div>
+          <div class="fg"><label>Select Student</label><select id="bStu" onchange="loadSBill()"><option value="">Choose student</option></select></div>
+        </div>
+        <div class="fr">
+          <div class="fg"><label>Billing Month</label><select id="bMo"><option value="1">January</option><option value="2">February</option><option value="3">March</option><option value="4">April</option><option value="5">May</option><option value="6">June</option><option value="7">July</option><option value="8">August</option><option value="9">September</option><option value="10">October</option><option value="11">November</option><option value="12">December</option></select></div>
+          <div class="fg"><label>Year</label><select id="bYr"><option value="2025">2025</option><option value="2026" selected>2026</option><option value="2027">2027</option></select></div>
+        </div>
+        <div class="card" id="bItems" style="display:none;margin-bottom:18px">
+          <div class="ct">&#128203; Bill Items</div>
+          <div id="bItemList" style="margin-bottom:12px"></div>
+          <div style="display:flex;gap:9px;align-items:flex-end">
+            <div class="fg" style="flex:2;margin:0"><label>Item Name</label><input type="text" id="iName" placeholder="e.g. Books" onkeydown="if(event.key==='Enter')addItem()"></div>
+            <div class="fg" style="flex:1;margin:0"><label>Amount (&#8377;)</label><input type="number" id="iAmt" placeholder="500" onkeydown="if(event.key==='Enter')addItem()"></div>
+            <button class="btn btn-i btn-sm np" onclick="addItem()" style="height:38px">+ Add</button>
+          </div>
+        </div>
+        <div id="bPrevW" style="display:none">
+          <div id="bPrev"></div>
+          <div class="np" style="display:flex;gap:9px;margin-top:14px;justify-content:center">
+            <button class="btn btn-s" onclick="savePrint()">&#128190; Save &amp; Print</button>
+            <button class="btn btn-p" onclick="printOnly()">&#128248; Print Only</button>
+          </div>
+        </div>
+      </div>
+      <div id="bt-ov" class="stab">
+        <div class="crow">
+          <div class="fg"><label>Month</label><select id="ovMo"><option value="1">January</option><option value="2">February</option><option value="3">March</option><option value="4">April</option><option value="5">May</option><option value="6">June</option><option value="7">July</option><option value="8">August</option><option value="9">September</option><option value="10">October</option><option value="11">November</option><option value="12">December</option></select></div>
+          <div class="fg"><label>Year</label><select id="ovYr"><option value="2025">2025</option><option value="2026" selected>2026</option><option value="2027">2027</option></select></div>
+          <div class="fg"><label>Class</label><select id="ovCls"><option value="">All</option><option>1</option><option>2</option><option>3</option><option>4</option><option>5</option><option>6</option><option>7</option><option>8</option><option>9</option><option>10</option><option>11</option><option>12</option></select></div>
+          <button class="btn btn-p btn-sm" onclick="renderOv()" style="align-self:flex-end">View</button>
+        </div>
+        <div class="srow" id="ovStats" style="grid-template-columns:repeat(3,1fr);margin-bottom:16px"></div>
+        <div id="ovList"></div>
+      </div>
+      <div id="bt-hist" class="stab">
+        <div class="crow">
+          <div class="fg"><label>Search</label><input type="text" id="hSrch" placeholder="Name or roll..." oninput="renderHist()"></div>
+          <div class="fg"><label>Month</label><select id="hMo"><option value="">All</option><option value="1">January</option><option value="2">February</option><option value="3">March</option><option value="4">April</option><option value="5">May</option><option value="6">June</option><option value="7">July</option><option value="8">August</option><option value="9">September</option><option value="10">October</option><option value="11">November</option><option value="12">December</option></select></div>
+          <button class="btn btn-o btn-sm" onclick="renderHist()" style="align-self:flex-end">Filter</button>
+        </div>
+        <div id="hList" class="sgrid"></div>
+      </div>
+    </div>
+
+    <!-- REPORTS -->
+    <div id="page-reports" class="page">
+      <div class="ph"><h2>Reports</h2><p>Attendance and financial analytics</p></div>
+      <div class="tpills">
+        <div class="tp active" onclick="swRTab('att',this)">&#128203; Attendance</div>
+        <div class="tp" onclick="swRTab('fin',this)">&#128176; Financial</div>
+      </div>
+      <div id="rt-att" class="stab active">
+        <div class="crow">
+          <div class="fg"><label>Date</label><input type="date" id="rDate" onchange="renderRpt()"></div>
+          <div class="fg"><label>Class</label><select id="rCls" onchange="renderRpt()"><option value="">All</option><option>1</option><option>2</option><option>3</option><option>4</option><option>5</option><option>6</option><option>7</option><option>8</option><option>9</option><option>10</option><option>11</option><option>12</option></select></div>
+          <button class="btn btn-o btn-sm np" onclick="window.print()" style="align-self:flex-end">&#128248; Print</button>
+        </div>
+        <div class="srow" id="rStats"></div>
+        <div id="rCnt"></div>
+      </div>
+      <div id="rt-fin" class="stab">
+        <div class="crow">
+          <div class="fg"><label>Month</label><select id="fMo"><option value="1">January</option><option value="2">February</option><option value="3">March</option><option value="4">April</option><option value="5">May</option><option value="6">June</option><option value="7">July</option><option value="8">August</option><option value="9">September</option><option value="10">October</option><option value="11">November</option><option value="12">December</option></select></div>
+          <div class="fg"><label>Year</label><select id="fYr"><option value="2025">2025</option><option value="2026" selected>2026</option><option value="2027">2027</option></select></div>
+          <button class="btn btn-p btn-sm" onclick="renderFin()" style="align-self:flex-end">Generate</button>
+        </div>
+        <div id="fRpt"></div>
+      </div>
+    </div>
+
+    <!-- SESSIONS -->
+    <div id="page-sessions" class="page">
+      <div class="ph"><h2>Session Management</h2><p>Academic year archives and upgrades</p></div>
+      <div id="sessList"></div>
+    </div>
+
+  </main>
+</div>
+
+<div id="qrM" class="modal"><div class="mbox"><div class="mhdr"><h3 id="qrMT">QR Code</h3><button class="mcl" onclick="clsM('qrM')">&#10005;</button></div><div id="qrMB"></div></div></div>
+<div id="sessM" class="modal"><div class="mbox"><div class="mhdr"><h3>&#8679; New Session</h3><button class="mcl" onclick="clsM('sessM')">&#10005;</button></div><div id="sessMB"></div></div></div>
+<div id="allQrM" class="modal"><div class="mbox mw"><div class="mhdr"><h3>All QR Codes</h3><button class="mcl" onclick="clsM('allQrM')">&#10005;</button></div><div class="np" style="text-align:center;margin-bottom:16px"><button class="btn btn-p" onclick="window.print()">&#128248; Print All</button></div><div id="allQrB"></div></div></div>
+
+<div class="twrap" id="twrap"></div>
+<div id="pr" style="display:none"></div>
+
+<script>
+const MO=['','January','February','March','April','May','June','July','August','September','October','November','December'];
+let db={
+  students:JSON.parse(localStorage.getItem('cps_s'))||[],
+  attendance:JSON.parse(localStorage.getItem('cps_a'))||{},
+  bills:JSON.parse(localStorage.getItem('cps_b'))||[],
+  sessions:JSON.parse(localStorage.getItem('cps_ss'))||[],
+  cur:localStorage.getItem('cps_cur')||'2026-27'
+};
+function sv(){
+  localStorage.setItem('cps_s',JSON.stringify(db.students));
+  localStorage.setItem('cps_a',JSON.stringify(db.attendance));
+  localStorage.setItem('cps_b',JSON.stringify(db.bills));
+  localStorage.setItem('cps_ss',JSON.stringify(db.sessions));
+  localStorage.setItem('cps_cur',db.cur);
+}
+window.addEventListener('load',function(){
+  document.getElementById('rj').valueAsDate=new Date();
+  document.getElementById('aDate').valueAsDate=new Date();
+  document.getElementById('rDate').valueAsDate=new Date();
+  const m=new Date().getMonth()+1;
+  ['bMo','ovMo','fMo'].forEach(id=>{const e=document.getElementById(id);if(e)e.value=m;});
+  document.getElementById('sessTag').textContent='Session '+db.cur;
+  populateQBM();populateFSess();
+  renderDash();renderStudents();renderAttR();renderSess();renderQB();
+  const p=new URLSearchParams(window.location.search),r=p.get('attendance');
+  if(r)markFromQR(r);
+});
+function populateQBM(){
+  const s=document.getElementById('qbM');s.innerHTML='<option value="">All months</option>';
+  for(let i=1;i<=12;i++){const o=document.createElement('option');o.value=i;o.textContent=MO[i];s.appendChild(o);}
+  s.value=new Date().getMonth()+1;
+}
+function populateFSess(){
+  const s=document.getElementById('fSess');
+  [...new Set(db.students.map(x=>x.session).filter(Boolean))].sort().reverse().forEach(x=>{const o=document.createElement('option');o.value=x;o.textContent='Session '+x;s.appendChild(o);});
+}
+function goP(n,el){
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.ni').forEach(x=>x.classList.remove('active'));
+  document.getElementById('page-'+n).classList.add('active');
+  if(el)el.classList.add('active');
+  if(n==='dashboard')renderDash();
+  if(n==='students')renderStudents();
+  if(n==='reports')renderRpt();
+  if(n==='sessions')renderSess();
+  if(n==='billing')renderHist();
+  if(n==='register')renderQB();
+}
+function swBTab(n,el){
+  document.querySelectorAll('#page-billing .stab').forEach(t=>t.classList.remove('active'));
+  document.querySelectorAll('#page-billing .tp').forEach(t=>t.classList.remove('active'));
+  document.getElementById('bt-'+n).classList.add('active');el.classList.add('active');
+  if(n==='hist')renderHist();if(n==='ov')renderOv();
+}
+function swRTab(n,el){
+  document.querySelectorAll('#page-reports .stab').forEach(t=>t.classList.remove('active'));
+  document.querySelectorAll('#page-reports .tp').forEach(t=>t.classList.remove('active'));
+  document.getElementById('rt-'+n).classList.add('active');el.classList.add('active');
+}
+function toast(msg,type='inf',dur=3000){
+  const w=document.getElementById('twrap'),t=document.createElement('div');
+  t.className='toast '+type;
+  t.innerHTML=(type==='suc'?'&#10003;':type==='err'?'&#10007;':'&#8505;')+' '+msg;
+  w.appendChild(t);setTimeout(()=>t.remove(),dur);
+}
+function opM(id){document.getElementById(id).classList.add('open');}
+function clsM(id){document.getElementById(id).classList.remove('open');}
+function regStudent(e){
+  e.preventDefault();
+  const roll=document.getElementById('rr').value.trim();
+  if(db.students.find(s=>s.rollNumber===roll&&s.session===db.cur)){toast('Roll number exists in this session!','err');return;}
+  const s={id:Date.now(),name:document.getElementById('rn').value.trim(),rollNumber:roll,dob:document.getElementById('rd').value,parentName:document.getElementById('rp').value.trim(),phoneNumber:document.getElementById('rpm').value.trim(),class:document.getElementById('rc').value,joiningDate:document.getElementById('rj').value,monthlyFee:parseFloat(document.getElementById('rf').value),address:document.getElementById('ra').value.trim(),session:db.cur};
+  db.students.push(s);sv();toast('Registered: '+s.name,'suc');
+  document.getElementById('sForm').reset();document.getElementById('rj').valueAsDate=new Date();
+  renderStudents();renderDash();renderQB();
+}
+function clrForm(){document.getElementById('sForm').reset();document.getElementById('rj').valueAsDate=new Date();}
+function getAP(r){let t=0,p=0;for(let d in db.attendance){t++;if(db.attendance[d][r])p++;}return t?Math.round(p/t*100):0;}
+function renderDash(){
+  const td=new Date().toISOString().split('T')[0],ta=db.attendance[td]||{};
+  const ss=db.students.filter(s=>s.session===db.cur),pr=ss.filter(s=>ta[s.rollNumber]).length;
+  const m=new Date().getMonth()+1,y=new Date().getFullYear();
+  const mb=db.bills.filter(b=>b.month==m&&b.year==y),col=mb.reduce((a,b)=>a+b.total,0);
+  document.getElementById('dStats').innerHTML=`<div class="sbox"><div class="sic si-b">&#128101;</div><div class="snum">${ss.length}</div><div class="slbl">Total Students</div></div><div class="sbox"><div class="sic si-g">&#10003;</div><div class="snum">${pr}</div><div class="slbl">Present Today</div></div><div class="sbox"><div class="sic si-r">&#9888;</div><div class="snum">${ss.length-pr}</div><div class="slbl">Absent Today</div></div><div class="sbox"><div class="sic si-gold">&#128176;</div><div class="snum">&#8377;${col.toLocaleString('en-IN')}</div><div class="slbl">Collected This Month</div></div>`;
+  const ae=document.getElementById('dAtt'),plist=ss.filter(s=>ta[s.rollNumber]).slice(0,5);
+  ae.innerHTML=plist.length?plist.map(s=>`<div class="ac pres" style="margin-bottom:7px"><div class="an">${s.name}</div><div class="as">Class ${s.class} &#183; ${s.rollNumber}</div><div class="at">&#128336; ${ta[s.rollNumber].time}</div></div>`).join('')+(pr>5?`<p style="color:var(--text-light);font-size:.75rem;margin-top:6px">+${pr-5} more...</p>`:''):'<div class="empty" style="padding:16px 0"><div class="ei">&#128203;</div><p>No attendance today</p></div>';
+  const be=document.getElementById('dBills'),rb=[...db.bills].sort((a,b)=>b.createdAt-a.createdAt).slice(0,5);
+  be.innerHTML=rb.length?rb.map(b=>`<div class="qbi"><div class="qbd"></div><div><div class="qbn">${b.studentName}</div><div class="qbs">${MO[b.month]} ${b.year} &#183; Class ${b.studentClass}</div></div><div class="qbam" style="margin-left:auto">&#8377;${b.total.toLocaleString('en-IN')}</div></div>`).join(''):'<div class="empty" style="padding:16px 0"><div class="ei">&#128179;</div><p>No bills yet</p></div>';
+}
+function renderStudents(){
+  const srch=(document.getElementById('srch')?.value||'').toLowerCase(),cls=document.getElementById('fCls')?.value||'',sess=document.getElementById('fSess')?.value||'';
+  let list=db.students.filter(s=>{if(cls&&s.class!==cls)return false;if(sess&&s.session!==sess)return false;if(srch&&!s.name.toLowerCase().includes(srch)&&!s.rollNumber.toLowerCase().includes(srch))return false;return true;});
+  document.getElementById('scnt').textContent=list.length;
+  const g=document.getElementById('sGrid');
+  if(!list.length){g.innerHTML='<div class="empty"><div class="ei">&#128100;</div><h4>No students found</h4></div>';return;}
+  g.innerHTML=list.map(s=>{
+    const ap=getAP(s.rollNumber),init=s.name.split(' ').map(w=>w[0]).join('').substring(0,2).toUpperCase(),pm=db.bills.filter(b=>b.studentId===s.id).length;
+    return`<div class="sc"><div class="av">${init}</div><div class="sm"><h3>${s.name} <span class="bdg bdg-c">Class ${s.class}</span> <span class="bdg bdg-s">${s.session}</span></h3><div class="sub"><span>&#128203; ${s.rollNumber}</span><span>&#128106; ${s.parentName}</span><span>&#128241; ${s.phoneNumber}</span></div><div style="margin-top:5px;display:flex;align-items:center;gap:9px"><div style="flex:1;background:#e9ecef;border-radius:20px;height:5px;max-width:140px"><div style="background:${ap>=75?'var(--success)':ap>=50?'var(--warning)':'var(--danger)'};width:${ap}%;height:5px;border-radius:20px"></div></div><span style="font-size:.7rem;color:var(--text-light)">${ap}% &#183; ${pm} bills</span></div></div><div class="sa"><button class="btn btn-i btn-xs" onclick="showQR(${s.id})">QR Code</button><button class="btn btn-g btn-xs" onclick="qkBill(${s.id})">Bill</button><button class="btn btn-o btn-xs" onclick="upgStu(${s.id})" title="Upgrade session">&#8679; Upgrade</button><button class="btn btn-d btn-xs" onclick="delStu(${s.id})">&#128465;</button></div></div>`;
+  }).join('');
+}
+function delStu(id){if(!confirm('Delete this student?'))return;db.students=db.students.filter(s=>s.id!==id);sv();renderStudents();renderDash();toast('Deleted','inf');}
+function upgStu(id){
+  const s=db.students.find(s=>s.id===id);if(!s)return;
+  goP('register',document.querySelector('[onclick*=\'register\']'));
+  setTimeout(()=>{
+    document.getElementById('rn').value=s.name;document.getElementById('rd').value=s.dob;
+    document.getElementById('rp').value=s.parentName;document.getElementById('rpm').value=s.phoneNumber;
+    document.getElementById('rc').value=s.class;document.getElementById('rf').value=s.monthlyFee;
+    document.getElementById('ra').value=s.address||'';document.getElementById('rr').value='';
+    document.getElementById('rj').valueAsDate=new Date();
+    toast('Form prefilled — enter new Roll No for session '+db.cur,'inf',5000);
+  },150);
+}
+function qkBill(id){
+  goP('billing',document.querySelector('[onclick*=\'billing\']'));
+  setTimeout(()=>{const s=db.students.find(s=>s.id===id);if(!s)return;document.getElementById('bCls').value=s.class;loadBStu();setTimeout(()=>{document.getElementById('bStu').value=id;loadSBill();},110);},180);
+}
+const BU=window.location.href.split('?')[0];
+function showQR(id){
+  const s=db.students.find(s=>s.id===id);if(!s)return;
+  const url=BU+'?attendance='+s.rollNumber;
+  document.getElementById('qrMT').textContent=s.name+' &#8212; QR Code';
+  document.getElementById('qrMB').innerHTML=`<div style="text-align:center">
+    <div class="qrc" id="qrCS"><div class="qrh">&#127891; Central Public School</div><div class="qrs">Session ${s.session} &#183; Class ${s.class}</div><div id="qrCV" style="margin:10px auto;display:inline-block"></div><div class="qrn">${s.name}</div><div class="qrroll">Roll: ${s.rollNumber}</div></div>
+    <div class="qrib"><div style="font-weight:700;margin-bottom:7px;color:var(--navy)">&#128204; Info shown on scan (no redirect)</div><div class="qrir"><span>&#128100; Name:</span><span><b>${s.name}</b></span></div><div class="qrir"><span>&#128290; Roll:</span><span>${s.rollNumber}</span></div><div class="qrir"><span>&#128218; Class:</span><span>Class ${s.class}</span></div><div class="qrir"><span>&#128241; Phone:</span><span>${s.phoneNumber}</span></div><div class="qrir"><span>&#128336; Scan time:</span><span>Auto-recorded</span></div></div>
+    <div class="np" style="display:flex;gap:9px;justify-content:center;margin-top:18px"><button class="btn btn-p" onclick="prQR()">&#128248; Print Card</button><button class="btn btn-o" onclick="clsM('qrM')">Close</button></div>
+  </div>`;
+  opM('qrM');
+  setTimeout(()=>{new QRCode(document.getElementById('qrCV'),{text:url,width:190,height:190,colorDark:'#0f1b2d',colorLight:'#fff',correctLevel:QRCode.CorrectLevel.H});},110);
+}
+function prQR(){
+  const c=document.getElementById('qrCS'),pr=document.getElementById('pr');
+  pr.innerHTML='<div style="padding:28px;text-align:center">'+c.outerHTML+'</div>';
+  pr.style.display='block';window.print();pr.style.display='none';pr.innerHTML='';
+}
+function expAllQR(){
+  const cls=document.getElementById('fCls')?.value||'',sess=document.getElementById('fSess')?.value||'';
+  const list=db.students.filter(s=>{if(sess&&s.session!==sess)return false;if(cls&&s.class!==cls)return false;return true;});
+  if(!list.length){toast('No students match filter','err');return;}
+  document.getElementById('allQrB').innerHTML=`<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:14px">${list.map((s,i)=>`<div style="text-align:center;border:2px solid var(--navy);border-radius:11px;padding:14px;page-break-inside:avoid"><div style="font-family:'Playfair Display',serif;font-size:.9rem;font-weight:800;color:var(--navy)">Central Public School</div><div style="font-size:.7rem;color:var(--text-light);margin:2px 0 8px">Session ${s.session} &#183; Class ${s.class}</div><div id="qa${i}" style="margin:0 auto;display:inline-block"></div><div style="font-size:.88rem;font-weight:700;color:var(--navy);margin-top:7px">${s.name}</div><div style="font-family:'DM Mono',monospace;font-size:.75rem;color:var(--text-mid)">Roll: ${s.rollNumber}</div><div style="font-size:.7rem;color:var(--text-light);margin-top:2px">${s.phoneNumber}</div></div>`).join('')}</div>`;
+  opM('allQrM');
+  setTimeout(()=>{list.forEach((s,i)=>{new QRCode(document.getElementById('qa'+i),{text:BU+'?attendance='+s.rollNumber,width:150,height:150,colorDark:'#0f1b2d',colorLight:'#fff',correctLevel:QRCode.CorrectLevel.H});});},130);
+}
+function markFromQR(r){
+  const s=db.students.find(s=>s.rollNumber===r);
+  if(!s){alert('Student not found: '+r);return;}
+  const td=new Date().toISOString().split('T')[0];
+  if(!db.attendance[td])db.attendance[td]={};
+  if(db.attendance[td][r]){alert('Already marked!\n&#128100; '+s.name+'\n&#128290; '+r+'\n&#128336; '+db.attendance[td][r].time+'\n&#128241; '+s.phoneNumber);return;}
+  const time=new Date().toLocaleTimeString('en-IN');
+  db.attendance[td][r]={name:s.name,class:s.class,time,phone:s.phoneNumber};sv();
+  alert('Attendance Marked!\n&#128100; '+s.name+'\n&#128290; Roll: '+r+'\n&#128218; Class '+s.class+'\n&#128241; '+s.phoneNumber+'\n&#128336; '+time);
+}
 function markAtt(){
-  const roll=document.getElementById('scanIn').value.trim();
-  if(!roll)return;
-  const s=students.find(x=>x.rollNumber===roll);
-  const msg=document.getElementById('attMsg');
-  if(!s){
-    msg.innerHTML=`<div style="color:var(--err);background:rgba(231,76,60,.1);border-radius:8px;padding:11px">❌ Roll "${roll}" not found</div>`;
-    setTimeout(()=>msg.innerHTML='',3000);return;
+  const r=document.getElementById('scanIn').value.trim();if(!r)return;
+  const s=db.students.find(s=>s.rollNumber===r),f=document.getElementById('sFeed');f.style.display='flex';
+  if(!s){f.className='sfeed err';f.innerHTML='&#10007; Not found: <b>'+r+'</b>';}
+  else{
+    const td=new Date().toISOString().split('T')[0];if(!db.attendance[td])db.attendance[td]={};
+    if(db.attendance[td][r]){f.className='sfeed wrn';f.innerHTML='&#9888; Already marked &#8212; <b>'+s.name+'</b> at '+db.attendance[td][r].time;}
+    else{const time=new Date().toLocaleTimeString('en-IN');db.attendance[td][r]={name:s.name,class:s.class,time,phone:s.phoneNumber};sv();renderAttR();renderDash();f.className='sfeed suc';f.innerHTML='&#10003; <b>'+s.name+'</b> &#183; Class '+s.class+' &#183; &#128336; '+time;}
   }
-  if(!attendance[TODAY])attendance[TODAY]={};
-  if(attendance[TODAY][roll]){
-    msg.innerHTML=`<div style="color:var(--warn);background:rgba(243,156,18,.1);border-radius:8px;padding:11px">⚠️ Already marked: <strong>${s.name}</strong> at ${attendance[TODAY][roll].time}</div>`;
-    document.getElementById('scanIn').value='';
-    setTimeout(()=>msg.innerHTML='',3000);return;
-  }
-  const time=new Date().toLocaleTimeString('en-IN');
-  attendance[TODAY][roll]={name:s.name,class:s.class,time};
-  save('attendance',attendance);
-  msg.innerHTML=`<div style="color:var(--ok);background:rgba(46,204,113,.1);border-radius:8px;padding:11px">✅ <strong>${s.name}</strong> · Class ${s.class} · ${time}</div>`;
-  document.getElementById('scanIn').value='';
-  setTimeout(()=>msg.innerHTML='',3000);
-  renderTodayAtt();
+  document.getElementById('scanIn').value='';setTimeout(()=>{f.style.display='none';},3500);
 }
-function qrMarkAtt(roll){
-  const s=students.find(x=>x.rollNumber===roll);
-  if(!s){alert('❌ Student not found: '+roll);return;}
-  if(!attendance[TODAY])attendance[TODAY]={};
-  if(attendance[TODAY][roll]){alert(`⚠️ Already marked!\n${s.name}\nAt: ${attendance[TODAY][roll].time}`);return;}
-  const time=new Date().toLocaleTimeString('en-IN');
-  attendance[TODAY][roll]={name:s.name,class:s.class,time};
-  save('attendance',attendance);
-  alert(`✅ Attendance Marked!\n${s.name} · Class ${s.class}\nTime: ${time}`);
+function renderAttR(){
+  const date=document.getElementById('aDate')?.value,cls=document.getElementById('aCls')?.value||'';if(!date)return;
+  const da=db.attendance[date]||{};let ss=db.students.filter(s=>s.session===db.cur);if(cls)ss=ss.filter(s=>s.class===cls);
+  const pr=ss.filter(s=>da[s.rollNumber]),ab=ss.filter(s=>!da[s.rollNumber]);
+  document.getElementById('aStats').innerHTML=`<div class="sbox"><div class="sic si-b">&#128101;</div><div class="snum">${ss.length}</div><div class="slbl">Total</div></div><div class="sbox"><div class="sic si-g">&#10003;</div><div class="snum">${pr.length}</div><div class="slbl">Present</div></div><div class="sbox"><div class="sic si-r">&#10007;</div><div class="snum">${ab.length}</div><div class="slbl">Absent</div></div><div class="sbox"><div class="sic si-gold">&#128202;</div><div class="snum">${ss.length?Math.round(pr.length/ss.length*100):0}%</div><div class="slbl">Rate</div></div>`;
+  let h='<div class="sdiv">Present ('+pr.length+')</div><div class="agrid">';
+  pr.forEach(s=>{h+=`<div class="ac pres"><div class="an">${s.name}</div><div class="as">Roll ${s.rollNumber} &#183; Class ${s.class}</div><div class="at">&#128336; ${da[s.rollNumber].time}</div></div>`;});
+  h+='</div><div class="sdiv">Absent ('+ab.length+')</div><div class="agrid">';
+  ab.forEach(s=>{h+=`<div class="ac abs"><div class="an">${s.name}</div><div class="as">Roll ${s.rollNumber} &#183; Class ${s.class}</div><div class="as">&#128241; ${s.phoneNumber}</div></div>`;});
+  h+='</div>';document.getElementById('aReport').innerHTML=h;
 }
-function renderTodayAtt(){
-  const c=document.getElementById('todayAtt');if(!c)return;
-  const day=attendance[TODAY]||{};const present=Object.keys(day);
-  if(!present.length){c.innerHTML='<p style="color:var(--muted);text-align:center;padding:20px;font-size:.88em">No attendance marked today</p>';return;}
-  c.innerHTML=`<p style="color:var(--muted);font-size:.83em;margin-bottom:12px">${present.length} students present</p>
-  <div class="att-grid">${present.map(r=>`<div class="att-card"><h4>${day[r].name}</h4><p>Roll: ${r} · Class ${day[r].class}<br>${day[r].time}</p></div>`).join('')}</div>`;
+let cb={student:null,items:[]};
+function loadBStu(){
+  const cls=document.getElementById('bCls').value,sel=document.getElementById('bStu');
+  sel.innerHTML='<option value="">Choose student</option>';if(!cls)return;
+  db.students.filter(s=>s.class===cls&&s.session===db.cur).forEach(s=>{const o=document.createElement('option');o.value=s.id;o.textContent=s.name+' ('+s.rollNumber+')';sel.appendChild(o);});
 }
-
-// ══ BILLING ══
-function loadBillStudents(){
-  const cls=document.getElementById('billClass').value;
-  const sel=document.getElementById('billStudent');
-  sel.innerHTML='<option value="">Choose student</option>';
-  if(!cls)return;
-  students.filter(s=>s.class===cls).forEach(s=>{sel.appendChild(new Option(`${s.name} — ${s.rollNumber}`,s.id));});
+function loadSBill(){
+  const id=parseInt(document.getElementById('bStu').value);
+  if(!id){document.getElementById('bItems').style.display='none';document.getElementById('bPrevW').style.display='none';return;}
+  const s=db.students.find(s=>s.id===id);if(!s)return;
+  cb.student=s;cb.items=[{name:'Monthly Fee',price:s.monthlyFee}];
+  document.getElementById('bItems').style.display='block';renBI();updBP();
 }
-function startBill(){
-  const id=parseInt(document.getElementById('billStudent').value);if(!id)return;
-  cb.student=students.find(s=>s.id===id);
-  cb.items=[{name:'Monthly Fee',price:cb.student.monthlyFee}];
-  const msgs=document.getElementById('chatMsgs');
-  msgs.innerHTML=`<div class="msg msg-b"><strong>Bill for ${cb.student.name}</strong><br>Class ${cb.student.class} · Roll: ${cb.student.rollNumber}<br>Monthly Fee: ₹${cb.student.monthlyFee}<br><em style="color:var(--muted);font-size:.85em">Add more items below</em></div>`;
-  refreshPrev();
+function renBI(){
+  document.getElementById('bItemList').innerHTML=cb.items.map((it,i)=>`<div style="display:flex;align-items:center;justify-content:space-between;padding:7px 11px;background:var(--cream);border-radius:7px;margin-bottom:5px;border:1px solid var(--border)"><span style="font-size:.88rem;font-weight:500">${it.name}</span><div style="display:flex;align-items:center;gap:10px"><span style="font-family:'DM Mono',monospace;font-size:.88rem;font-weight:700">&#8377;${it.price.toFixed(2)}</span>${i>0?`<button class="btn btn-d btn-xs np" onclick="remBI(${i})">&#10005;</button>`:''}</div></div>`).join('');
 }
 function addItem(){
-  const inp=document.getElementById('chatIn').value.trim();
-  if(!inp||!cb.student){toast('Select a student first');return;}
-  const parts=inp.trim().split(' ');
-  const price=parseFloat(parts[parts.length-1]);
-  const name=parts.slice(0,-1).join(' ');
-  if(!name||isNaN(price)||price<=0){toast('Format: Item Name Price — e.g. Books 500');return;}
-  cb.items.push({name,price});
-  const msgs=document.getElementById('chatMsgs');
-  msgs.innerHTML+=`<div class="msg msg-u">${inp}</div><div class="msg msg-b">✅ Added: ${name} — ₹${price}</div>`;
-  msgs.scrollTop=msgs.scrollHeight;
-  document.getElementById('chatIn').value='';
-  refreshPrev();
+  const n=document.getElementById('iName').value.trim(),a=parseFloat(document.getElementById('iAmt').value);
+  if(!n||isNaN(a)||a<=0){toast('Enter valid name and amount','err');return;}
+  cb.items.push({name:n,price:a});document.getElementById('iName').value='';document.getElementById('iAmt').value='';renBI();updBP();
 }
-function clearBill(){cb={student:null,items:[]};document.getElementById('chatMsgs').innerHTML='<div class="msg msg-b" style="color:var(--muted)">Select a student to start a bill...</div>';document.getElementById('billPreview').innerHTML='';}
-function refreshPrev(){
+function remBI(i){cb.items.splice(i,1);renBI();updBP();}
+function updBP(){
   if(!cb.student)return;
-  const total=cb.items.reduce((s,i)=>s+i.price,0);
-  const month=document.getElementById('billMonth').value;
-  const d=new Date().toLocaleDateString('en-IN');
-  document.getElementById('billPreview').innerHTML=buildBillHTML(cb.student,cb.items,total,month,d);
-}
-function buildBillHTML(st,items,total,month,d){
-  return`<div class="bill-print">
-    <div class="bp-head"><h2>🎓 CENTRAL PUBLIC SCHOOL</h2>
-      <p>Fee Receipt · Session ${currentSession.replace('-','–')}</p>
-      <p style="margin-top:3px;font-size:.82em;color:#777">Date: ${d} · Month: <strong>${month}</strong></p></div>
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:7px;margin-bottom:14px;font-size:.9em">
-      <p><strong>Student:</strong> ${st.name}</p>
-      <p><strong>Roll No:</strong> ${st.rollNumber}</p>
-      <p><strong>Class:</strong> ${st.class}</p>
-      <p><strong>Parent:</strong> ${st.parentName}</p>
-    </div>
-    <div>${items.map(i=>`<div class="bp-row"><span>${i.name}</span><span>₹${i.price.toFixed(2)}</span></div>`).join('')}</div>
-    <div class="bp-total"><span>Total Amount</span><span>₹${total.toFixed(2)}</span></div>
-    <div class="bp-foot">Thank you for your payment · Central Public School</div>
+  const s=cb.student,tot=cb.items.reduce((a,b)=>a+b.price,0);
+  const mo=parseInt(document.getElementById('bMo').value),yr=document.getElementById('bYr').value;
+  const td=new Date().toLocaleDateString('en-IN',{day:'2-digit',month:'long',year:'numeric'});
+  const rno='REC-'+yr+'-'+String(mo).padStart(2,'0')+'-'+s.rollNumber;
+  document.getElementById('bPrevW').style.display='block';
+  document.getElementById('bPrev').innerHTML=`<div class="bpaper" id="pbill">
+    <div class="bsn">Central Public School</div><div class="btag">Excellence in Education &#8212; Jamshedpur</div>
+    <div class="brl">Fee Receipt</div>
+    <div class="bmeta"><div class="bmr"><span>Receipt No.:</span><span>${rno}</span></div><div class="bmr"><span>Date:</span><span>${td}</span></div><div class="bmr"><span>Student:</span><span>${s.name}</span></div><div class="bmr"><span>Roll No.:</span><span>${s.rollNumber}</span></div><div class="bmr"><span>Class:</span><span>Class ${s.class}</span></div><div class="bmr"><span>Parent:</span><span>${s.parentName}</span></div><div class="bmr"><span>Phone:</span><span>${s.phoneNumber}</span></div><div class="bmr"><span>Period:</span><span>${MO[mo]} ${yr}</span></div></div>
+    <table class="btbl"><thead><tr><th>#</th><th>Description</th><th style="text-align:right">Amount (&#8377;)</th></tr></thead><tbody>${cb.items.map((it,i)=>`<tr><td>${i+1}</td><td>${it.name}</td><td style="text-align:right;font-family:'DM Mono',monospace">${it.price.toFixed(2)}</td></tr>`).join('')}</tbody></table>
+    <div class="btr"><div class="btb"><div><div class="tlbl">Total Amount</div></div><div class="tval">&#8377;${tot.toLocaleString('en-IN',{minimumFractionDigits:2})}</div></div></div>
+    <div class="bft"><p>Thank you for your timely payment.</p><p>Central Public School &#183; Session ${s.session}</p></div>
   </div>`;
 }
-function printBill(){
-  if(!cb.student){toast('Generate a bill first');return;}
-  const total=cb.items.reduce((s,i)=>s+i.price,0);
-  const month=document.getElementById('billMonth').value;
-  const html=buildBillHTML(cb.student,cb.items,total,month,new Date().toLocaleDateString('en-IN'));
-  const pt=document.getElementById('billPrintTarget');
-  pt.innerHTML=html;pt.style.display='block';
-  window.print();
-  setTimeout(()=>{pt.innerHTML='';pt.style.display='none';},2000);
+function savePrint(){
+  if(!cb.student){toast('Select a student first','err');return;}
+  const s=cb.student,mo=parseInt(document.getElementById('bMo').value),yr=parseInt(document.getElementById('bYr').value),tot=cb.items.reduce((a,b)=>a+b.price,0);
+  db.bills=db.bills.filter(b=>!(b.studentId===s.id&&b.month===mo&&b.year===yr));
+  db.bills.push({id:Date.now(),studentId:s.id,studentName:s.name,studentClass:s.class,rollNumber:s.rollNumber,parentName:s.parentName,phone:s.phoneNumber,month:mo,year:yr,total:tot,items:[...cb.items],createdAt:Date.now(),session:s.session});
+  sv();renderDash();renderQB();toast('Saved: '+s.name,'suc');printOnly();
 }
-function saveBill(){
-  if(!cb.student){toast('Generate a bill first');return;}
-  const month=document.getElementById('billMonth').value;
-  const total=cb.items.reduce((s,i)=>s+i.price,0);
-  const bill={
-    id:Date.now(),studentId:cb.student.id,studentName:cb.student.name,
-    rollNumber:cb.student.rollNumber,class:cb.student.class,
-    month,items:[...cb.items],total,
-    date:new Date().toLocaleDateString('en-IN'),
-    savedAt:new Date().toISOString(),session:currentSession
-  };
-  bills.push(bill);save('bills',bills);
-  toast(`💾 Bill saved — ${bill.studentName} · ${month}`);
-  renderBH();
+function printOnly(){
+  const b=document.getElementById('pbill');if(!b){toast('Generate bill first','err');return;}
+  const pr=document.getElementById('pr');pr.innerHTML=b.outerHTML;pr.style.display='block';window.print();pr.style.display='none';pr.innerHTML='';
 }
-
-// ══ BILL HISTORY ══
-let bhOpen=false;
-function toggleBH(){
-  bhOpen=!bhOpen;
-  document.getElementById('bhPanel').classList.toggle('open',bhOpen);
-  document.getElementById('bhBtn').classList.toggle('open',bhOpen);
-  if(bhOpen)renderBH();
+function renderOv(){
+  const mo=parseInt(document.getElementById('ovMo').value),yr=parseInt(document.getElementById('ovYr').value),cls=document.getElementById('ovCls').value;
+  let ss=db.students.filter(s=>s.session===db.cur);if(cls)ss=ss.filter(s=>s.class===cls);
+  const bills=db.bills.filter(b=>b.month===mo&&b.year===yr),bids=bills.map(b=>b.studentId);
+  const paid=ss.filter(s=>bids.includes(s.id)),upd=ss.filter(s=>!bids.includes(s.id)),col=bills.filter(b=>ss.find(s=>s.id===b.studentId)).reduce((a,b)=>a+b.total,0);
+  document.getElementById('ovStats').innerHTML=`<div class="sbox"><div class="sic si-g">&#10003;</div><div class="snum">${paid.length}</div><div class="slbl">Paid &#8212; ${MO[mo]}</div></div><div class="sbox"><div class="sic si-r">&#8987;</div><div class="snum">${upd.length}</div><div class="slbl">Unpaid</div></div><div class="sbox"><div class="sic si-gold">&#128176;</div><div class="snum">&#8377;${col.toLocaleString('en-IN')}</div><div class="slbl">Collected</div></div>`;
+  let h='<div class="sdiv">Paid ('+paid.length+')</div><div class="sgrid">';
+  paid.forEach(s=>{const b=bills.find(b=>b.studentId===s.id);h+=`<div class="mbc"><div class="mbi">&#10003;</div><div style="flex:1"><div class="mbn">${s.name} <span class="bdg bdg-c">Class ${s.class}</span></div><div class="mbs">Roll: ${s.rollNumber}</div></div><div class="mba">&#8377;${b.total.toLocaleString('en-IN')}<div class="mbst" style="color:var(--success)">PAID</div></div><button class="btn btn-o btn-xs np" onclick="rePrint(${b.id})">&#128248;</button></div>`;});
+  h+='</div><div class="sdiv">Unpaid ('+upd.length+')</div><div class="sgrid">';
+  upd.forEach(s=>{h+=`<div class="mbc"><div class="mbi">&#8987;</div><div style="flex:1"><div class="mbn">${s.name} <span class="bdg bdg-c">Class ${s.class}</span></div><div class="mbs">Roll: ${s.rollNumber} &#183; &#128241; ${s.phoneNumber}</div></div><div class="mba" style="font-size:.9rem;color:var(--danger)">&#8377;${s.monthlyFee.toLocaleString('en-IN')}<div class="mbst" style="color:var(--danger)">DUE</div></div><button class="btn btn-g btn-xs np" onclick="qkBill(${s.id})">Bill</button></div>`;});
+  h+='</div>';document.getElementById('ovList').innerHTML=h;
 }
-function renderBH(){
-  const cls=document.getElementById('bhClass').value;
-  const mon=document.getElementById('bhMon').value;
-  let f=bills.filter(b=>(!cls||b.class===cls)&&(!mon||b.month===mon));
-  const c=document.getElementById('bhContent');
-  const s=document.getElementById('bhSum');
-  if(!f.length){c.innerHTML='<p style="color:var(--muted);font-size:.83em;text-align:center;padding:38px 0">No bills found</p>';s.innerHTML='';return;}
-  const byM={};f.forEach(b=>{if(!byM[b.month])byM[b.month]=[];byM[b.month].push(b);});
-  c.innerHTML=MONTHS.filter(m=>byM[m]).map(m=>`
-    <div class="bh-month">
-      <div class="bh-month-lbl">📅 ${m}</div>
-      ${byM[m].map(b=>`<div class="bh-bc paid">
-        <div class="bh-bi">
-          <h4>${b.studentName}</h4>
-          <p>Class ${b.class} · Roll ${b.rollNumber}</p>
-          <div class="bh-date">Saved: ${b.date}</div>
-          <button class="bh-prbtn" onclick="printHistBill(${b.id})">🖨️ Print</button>
-        </div>
-        <div style="text-align:right">
-          <div style="font-weight:700;color:var(--gold);font-size:.93em">₹${b.total.toFixed(0)}</div>
-          <button onclick="delBill(${b.id})" style="background:none;border:none;color:var(--err);cursor:pointer;font-size:.72em;margin-top:5px">✕</button>
-        </div>
-      </div>`).join('')}
-    </div>`).join('');
-  const tot=f.reduce((a,b)=>a+b.total,0);
-  s.innerHTML=`<div class="bh-sr"><span style="color:var(--muted)">Bills</span><span>${f.length}</span></div>
-  <div class="bh-st"><span>Total Collected</span><span>₹${tot.toFixed(0)}</span></div>`;
+function renderHist(){
+  const srch=(document.getElementById('hSrch')?.value||'').toLowerCase(),mo=parseInt(document.getElementById('hMo')?.value||'0');
+  let bills=[...db.bills].sort((a,b)=>b.createdAt-a.createdAt);
+  if(mo)bills=bills.filter(b=>b.month===mo);
+  if(srch)bills=bills.filter(b=>b.studentName.toLowerCase().includes(srch)||b.rollNumber.toLowerCase().includes(srch));
+  const c=document.getElementById('hList');
+  if(!bills.length){c.innerHTML='<div class="empty"><div class="ei">&#128194;</div><h4>No bills found</h4></div>';return;}
+  c.innerHTML=bills.map(b=>`<div class="sc"><div class="av" style="background:linear-gradient(135deg,var(--success),#20c997)">&#8377;</div><div class="sm"><h3>${b.studentName} <span class="bdg bdg-c">Class ${b.studentClass}</span></h3><div class="sub"><span>&#128290; ${b.rollNumber}</span><span>&#128197; ${MO[b.month]} ${b.year}</span><span>&#128106; ${b.parentName}</span></div><div style="margin-top:5px">${b.items.map(it=>`<span class="bdg" style="background:var(--cream);color:var(--text-mid);border:1px solid var(--border);margin:2px">${it.name}: &#8377;${it.price}</span>`).join('')}</div></div><div style="text-align:right;flex-shrink:0"><div style="font-family:'Playfair Display',serif;font-size:1.2rem;font-weight:800;color:var(--navy)">&#8377;${b.total.toLocaleString('en-IN')}</div><div style="font-size:.72rem;color:var(--text-light)">${new Date(b.createdAt).toLocaleDateString('en-IN')}</div><button class="btn btn-o btn-xs np" style="margin-top:7px" onclick="rePrint(${b.id})">&#128248; Reprint</button></div></div>`).join('');
 }
-function delBill(id){if(!confirm('Delete bill?'))return;bills=bills.filter(b=>b.id!==id);save('bills',bills);renderBH();toast('🗑️ Bill deleted');}
-function printHistBill(id){
-  const b=bills.find(x=>x.id===id);if(!b)return;
-  const st=students.find(x=>x.id===b.studentId)||{name:b.studentName,rollNumber:b.rollNumber,class:b.class,parentName:'—'};
-  const html=buildBillHTML(st,b.items,b.total,b.month,b.date);
-  const w=window.open('','_blank','width=720,height=820');
-  if(!w){alert('Allow pop-ups to print');return;}
-  w.document.write(`<!DOCTYPE html><html><head><title>Bill - ${b.studentName}</title>
-  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700&family=DM+Sans:wght@400;600&display=swap" rel="stylesheet">
-  <style>
-  body{font-family:'DM Sans',sans-serif;background:#fff;padding:30px;color:#1a1a2e}
-  .bill-print{max-width:580px;margin:0 auto}
-  .bp-head{text-align:center;border-bottom:3px double #1a1a2e;padding-bottom:18px;margin-bottom:18px}
-  .bp-head h2{font-family:'Playfair Display',serif;font-size:1.75em;color:#1a1a2e}
-  .bp-head p{font-size:.83em;color:#666}
-  .bp-row{display:flex;justify-content:space-between;padding:7px 0;border-bottom:1px solid #eee}
-  .bp-total{display:flex;justify-content:space-between;font-size:1.25em;font-weight:700;padding:15px 0;border-top:3px double #1a1a2e;margin-top:7px}
-  .bp-foot{text-align:center;margin-top:18px;font-size:.78em;color:#999}
-  </style></head><body>${html}<script>setTimeout(()=>window.print(),600)<\/script></body></html>`);
+function rePrint(bid){
+  const b=db.bills.find(b=>b.id===bid);if(!b)return;
+  const td=new Date().toLocaleDateString('en-IN',{day:'2-digit',month:'long',year:'numeric'}),rno='REC-'+b.year+'-'+String(b.month).padStart(2,'0')+'-'+b.rollNumber;
+  const pr=document.getElementById('pr');
+  pr.innerHTML=`<div class="bpaper"><div class="bsn">Central Public School</div><div class="btag">Excellence in Education &#8212; Jamshedpur</div><div class="brl">Fee Receipt</div><div class="bmeta"><div class="bmr"><span>Receipt No.:</span><span>${rno}</span></div><div class="bmr"><span>Date:</span><span>${td}</span></div><div class="bmr"><span>Student:</span><span>${b.studentName}</span></div><div class="bmr"><span>Roll No.:</span><span>${b.rollNumber}</span></div><div class="bmr"><span>Class:</span><span>Class ${b.studentClass}</span></div><div class="bmr"><span>Parent:</span><span>${b.parentName}</span></div><div class="bmr"><span>Phone:</span><span>${b.phone}</span></div><div class="bmr"><span>Period:</span><span>${MO[b.month]} ${b.year}</span></div></div><table class="btbl"><thead><tr><th>#</th><th>Description</th><th style="text-align:right">Amount (&#8377;)</th></tr></thead><tbody>${b.items.map((it,i)=>`<tr><td>${i+1}</td><td>${it.name}</td><td style="text-align:right;font-family:'DM Mono',monospace">${it.price.toFixed(2)}</td></tr>`).join('')}</tbody></table><div class="btr"><div class="btb"><div><div class="tlbl">Total</div></div><div class="tval">&#8377;${b.total.toLocaleString('en-IN',{minimumFractionDigits:2})}</div></div></div><div class="bft"><p>Thank you. Central Public School</p></div></div>`;
+  pr.style.display='block';window.print();pr.style.display='none';pr.innerHTML='';
 }
-
-// ══ REPORTS ══
-function showRpt(t){
-  document.getElementById('rpt-att').style.display=t==='att'?'block':'none';
-  document.getElementById('rpt-coll').style.display=t==='coll'?'block':'none';
-  document.getElementById('rpt-att-btn').className='btn btn-'+(t==='att'?'gold':'ghost')+' btn-sm';
-  document.getElementById('rpt-coll-btn').className='btn btn-'+(t==='coll'?'gold':'ghost')+' btn-sm';
-  if(t==='coll')genColl();
+function renderQB(){
+  const mo=parseInt(document.getElementById('qbM')?.value||new Date().getMonth()+1);
+  const bills=mo?db.bills.filter(b=>b.month===mo):db.bills;
+  const sorted=[...bills].sort((a,b)=>b.createdAt-a.createdAt).slice(0,8);
+  const c=document.getElementById('qbList');if(!c)return;
+  if(!sorted.length){c.innerHTML='<div class="empty" style="padding:20px 0"><div class="ei">&#128179;</div><p>No bills this month</p></div>';return;}
+  const tot=bills.reduce((a,b)=>a+b.total,0);
+  c.innerHTML=`<div style="background:rgba(30,63,110,.05);border-radius:7px;padding:9px 12px;margin-bottom:9px;display:flex;justify-content:space-between;align-items:center;border:1px solid var(--border)"><div style="font-size:.72rem;color:var(--text-light);font-weight:600;text-transform:uppercase">Collected</div><div style="font-family:'Playfair Display',serif;font-size:1.05rem;font-weight:800;color:var(--navy)">&#8377;${tot.toLocaleString('en-IN')}</div></div>${sorted.map(b=>`<div class="qbi"><div class="qbd"></div><div style="flex:1"><div class="qbn">${b.studentName}</div><div class="qbs">Class ${b.studentClass} &#183; ${MO[b.month]} ${b.year}</div></div><div style="display:flex;flex-direction:column;align-items:flex-end;gap:3px"><div class="qbam">&#8377;${b.total.toLocaleString('en-IN')}</div><button class="btn btn-o btn-xs" onclick="rePrint(${b.id})">&#128248;</button></div></div>`).join('')}${bills.length>8?`<p style="text-align:center;font-size:.72rem;color:var(--text-light);margin-top:7px">+${bills.length-8} more in Billing tab</p>`:''}`;
 }
-function genRpt(){
-  const date=document.getElementById('rptDate').value;
-  const cls=document.getElementById('rptClass').value;
-  if(!date)return;
-  const dayA=attendance[date]||{};
-  let rel=cls?students.filter(s=>s.class===cls):students;
-  const present=rel.filter(s=>dayA[s.rollNumber]);
-  const absent=rel.filter(s=>!dayA[s.rollNumber]);
-  const pct=rel.length?Math.round(present.length/rel.length*100):0;
-  document.getElementById('rptStats').innerHTML=`
-    <div class="sc gold"><div class="sc-num">${rel.length}</div><div class="sc-lbl">Total</div></div>
-    <div class="sc green"><div class="sc-num">${present.length}</div><div class="sc-lbl">Present</div></div>
-    <div class="sc red"><div class="sc-num">${absent.length}</div><div class="sc-lbl">Absent</div></div>
-    <div class="sc blue"><div class="sc-num">${pct}%</div><div class="sc-lbl">Rate</div></div>`;
-  document.getElementById('rptContent').innerHTML=`
-    <h3 style="color:var(--ok);margin-bottom:11px;font-family:'Playfair Display',serif">Present (${present.length})</h3>
-    <div class="att-grid">${present.map(s=>`<div class="att-card"><h4>${s.name}</h4><p>Roll: ${s.rollNumber} · Class ${s.class}<br>${dayA[s.rollNumber].time}</p></div>`).join('') || '<p style="color:var(--muted)">—</p>'}</div>
-    <h3 style="color:var(--err);margin:22px 0 11px;font-family:'Playfair Display',serif">Absent (${absent.length})</h3>
-    <div class="att-grid">${absent.map(s=>`<div class="att-card absent"><h4>${s.name}</h4><p>Roll: ${s.rollNumber} · Class ${s.class}<br>${s.parentName} · ${s.phoneNumber}</p></div>`).join('') || '<p style="color:var(--muted)">—</p>'}</div>`;
+function renderRpt(){
+  const date=document.getElementById('rDate')?.value,cls=document.getElementById('rCls')?.value||'';if(!date)return;
+  const da=db.attendance[date]||{};let ss=db.students.filter(s=>s.session===db.cur);if(cls)ss=ss.filter(s=>s.class===cls);
+  const pr=ss.filter(s=>da[s.rollNumber]),ab=ss.filter(s=>!da[s.rollNumber]);
+  document.getElementById('rStats').innerHTML=`<div class="sbox"><div class="sic si-b">&#128101;</div><div class="snum">${ss.length}</div><div class="slbl">Total</div></div><div class="sbox"><div class="sic si-g">&#10003;</div><div class="snum">${pr.length}</div><div class="slbl">Present</div></div><div class="sbox"><div class="sic si-r">&#10007;</div><div class="snum">${ab.length}</div><div class="slbl">Absent</div></div><div class="sbox"><div class="sic si-gold">&#128202;</div><div class="snum">${ss.length?Math.round(pr.length/ss.length*100):0}%</div><div class="slbl">Rate</div></div>`;
+  let h='<div class="sdiv">Present</div><div class="agrid">';
+  pr.forEach(s=>{h+=`<div class="ac pres"><div class="an">${s.name}</div><div class="as">Roll ${s.rollNumber} &#183; Class ${s.class}</div><div class="at">&#128336; ${da[s.rollNumber].time}</div></div>`;});
+  h+='</div><div class="sdiv">Absent</div><div class="agrid">';
+  ab.forEach(s=>{h+=`<div class="ac abs"><div class="an">${s.name}</div><div class="as">Roll ${s.rollNumber} &#183; Class ${s.class} &#183; &#128241; ${s.phoneNumber}</div></div>`;});
+  h+='</div>';document.getElementById('rCnt').innerHTML=h;
 }
-function genColl(){
-  const mon=document.getElementById('collMonth').value;
-  const cls=document.getElementById('collClass').value;
-  const f=bills.filter(b=>(!mon||b.month===mon)&&(!cls||b.class===cls));
-  const tot=f.reduce((s,b)=>s+b.total,0);
-  document.getElementById('collStats').innerHTML=`
-    <div class="sc gold"><div class="sc-num">${f.length}</div><div class="sc-lbl">Bills</div></div>
-    <div class="sc green"><div class="sc-num">₹${tot.toFixed(0)}</div><div class="sc-lbl">Collected</div></div>
-    <div class="sc blue"><div class="sc-num">${[...new Set(f.map(b=>b.class))].length}</div><div class="sc-lbl">Classes</div></div>
-    <div class="sc"><div class="sc-num">${f.length?Math.round(tot/f.length):0}</div><div class="sc-lbl">Avg/Bill</div></div>`;
-  if(!f.length){document.getElementById('collContent').innerHTML='<p style="text-align:center;color:var(--muted);padding:38px">No data</p>';return;}
-  const byM={};MONTHS.forEach(m=>{const mb=f.filter(b=>b.month===m);if(mb.length)byM[m]={count:mb.length,total:mb.reduce((s,b)=>s+b.total,0)};});
-  document.getElementById('collContent').innerHTML=`
-    <div class="card" style="margin-bottom:16px">
-      <h3 style="color:var(--gold);font-family:'Playfair Display',serif;margin-bottom:14px">Monthly Breakdown</h3>
-      <table class="mt"><thead><tr><th>Month</th><th>Bills</th><th>Collected</th></tr></thead>
-      <tbody>${MONTHS.filter(m=>byM[m]).map(m=>`<tr><td>${m}</td><td>${byM[m].count}</td><td>₹${byM[m].total.toFixed(0)}</td></tr>`).join('')}
-      <tr class="tr-tot"><td>TOTAL</td><td>${f.length}</td><td>₹${tot.toFixed(0)}</td></tr></tbody></table>
+function renderFin(){
+  const mo=parseInt(document.getElementById('fMo').value),yr=parseInt(document.getElementById('fYr').value);
+  const bills=db.bills.filter(b=>b.month===mo&&b.year===yr),tot=bills.reduce((a,b)=>a+b.total,0);
+  const bc={};bills.forEach(b=>{if(!bc[b.studentClass])bc[b.studentClass]=0;bc[b.studentClass]+=b.total;});
+  document.getElementById('fRpt').innerHTML=`<div class="srow" style="grid-template-columns:repeat(3,1fr)"><div class="sbox"><div class="sic si-gold">&#128176;</div><div class="snum">&#8377;${tot.toLocaleString('en-IN')}</div><div class="slbl">Total &#8212; ${MO[mo]} ${yr}</div></div><div class="sbox"><div class="sic si-b">&#128209;</div><div class="snum">${bills.length}</div><div class="slbl">Bills Generated</div></div><div class="sbox"><div class="sic si-g">&#128202;</div><div class="snum">&#8377;${bills.length?Math.round(tot/bills.length).toLocaleString('en-IN'):0}</div><div class="slbl">Average per Bill</div></div></div><div class="sdiv">Revenue by Class</div><div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px;margin-bottom:20px">${Object.entries(bc).sort((a,b)=>parseInt(a[0])-parseInt(b[0])).map(([c,a])=>`<div class="card" style="padding:14px"><div style="font-size:.72rem;color:var(--text-light);font-weight:600;text-transform:uppercase">Class ${c}</div><div style="font-family:'Playfair Display',serif;font-size:1.2rem;font-weight:800;color:var(--navy);margin-top:3px">&#8377;${a.toLocaleString('en-IN')}</div></div>`).join('')}</div><div class="sdiv">All Bills</div><div class="sgrid">${bills.map(b=>`<div class="sc"><div class="av" style="background:linear-gradient(135deg,var(--success),#20c997)">&#8377;</div><div class="sm"><h3>${b.studentName} <span class="bdg bdg-c">Class ${b.studentClass}</span></h3><div class="sub"><span>&#128290; ${b.rollNumber}</span><span>&#128106; ${b.parentName}</span></div></div><div style="text-align:right;flex-shrink:0"><div style="font-family:'Playfair Display',serif;font-size:1.15rem;font-weight:800;color:var(--navy)">&#8377;${b.total.toLocaleString('en-IN')}</div><button class="btn btn-o btn-xs np" style="margin-top:5px" onclick="rePrint(${b.id})">&#128248;</button></div></div>`).join('')}</div>`;
+}
+function renderSess(){
+  const all=[...new Set([db.cur,...db.sessions,...db.students.map(s=>s.session).filter(Boolean)])].sort().reverse();
+  let h=`<div class="sbann"><div><h3>Active: Session ${db.cur}</h3><p>All new registrations go to this session</p></div><button class="btn btn-g" onclick="showSessUpgrade()">&#8679; Start New Session</button></div><div class="sgrid">`;
+  all.forEach(sess=>{
+    const ss=db.students.filter(s=>s.session===sess),bs=db.bills.filter(b=>b.session===sess),col=bs.reduce((a,b)=>a+b.total,0);
+    h+=`<div class="card" style="padding:18px"><div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px"><div><div style="font-family:'Playfair Display',serif;font-size:1.15rem;font-weight:800;color:var(--navy)">Session ${sess}</div>${sess===db.cur?'<span class="bdg" style="background:rgba(45,155,90,.12);color:var(--success);margin-top:3px">&#9679; Active</span>':'<span class="bdg" style="background:var(--cream);color:var(--text-mid);border:1px solid var(--border);margin-top:3px">Archived</span>'}</div><div style="text-align:right"><div style="font-size:.72rem;color:var(--text-light)">Collected</div><div style="font-family:'Playfair Display',serif;font-size:1.05rem;font-weight:800;color:var(--navy)">&#8377;${col.toLocaleString('en-IN')}</div></div></div><div style="display:flex;gap:20px">${[[ss.length,'Students'],[bs.length,'Bills'],[...new Set(ss.map(s=>s.class))].length,'Classes'].map(([v,l])=>`<div><div style="font-size:1.4rem;font-weight:800;color:var(--navy)">${v}</div><div style="font-size:.72rem;color:var(--text-light)">${l}</div></div>`).join('')}</div></div>`;
+  });
+  h+='</div>';document.getElementById('sessList').innerHTML=h;
+}
+function showSessUpgrade(){
+  const cur=db.cur,sy=parseInt(cur.split('-')[0]),ns=sy+1,nxt=ns+'-'+(ns+1).toString().slice(-2);
+  document.getElementById('sessMB').innerHTML=`<div style="text-align:center;padding:8px 0">
+    <div style="font-size:2.8rem;margin-bottom:10px">&#128197;</div>
+    <p style="color:var(--text-mid);margin-bottom:18px">Start a new academic session</p>
+    <div style="display:flex;align-items:center;justify-content:center;gap:14px;margin-bottom:20px">
+      <div style="background:var(--cream);border-radius:9px;padding:12px 18px;border:1px solid var(--border)"><div style="font-size:.72rem;color:var(--text-light)">Current</div><div style="font-family:'Playfair Display',serif;font-size:1.15rem;font-weight:800;color:var(--navy)">${cur}</div></div>
+      <div style="font-size:1.4rem">&#8594;</div>
+      <div style="background:rgba(201,168,76,.12);border-radius:9px;padding:12px 18px;border:1px solid var(--gold)"><div style="font-size:.72rem;color:var(--gold)">New</div><div style="font-family:'Playfair Display',serif;font-size:1.15rem;font-weight:800;color:var(--navy)">${nxt}</div></div>
     </div>
-    <div class="card">
-      <h3 style="color:var(--gold);font-family:'Playfair Display',serif;margin-bottom:14px">All Bills</h3>
-      ${f.map(b=>`<div style="display:flex;justify-content:space-between;align-items:center;padding:9px 0;border-bottom:1px solid var(--border);flex-wrap:wrap;gap:7px">
-        <div><strong>${b.studentName}</strong><br><span style="font-size:.78em;color:var(--muted)">Class ${b.class} · ${b.month} · ${b.date}</span></div>
-        <div style="display:flex;align-items:center;gap:10px">
-          <strong style="color:var(--gold)">₹${b.total.toFixed(0)}</strong>
-          <button class="bh-prbtn" onclick="printHistBill(${b.id})">🖨️ Print</button>
-        </div>
-      </div>`).join('')}
-    </div>`;
-}
-
-// ══ SMS ══
-function sendSMS1(id){
-  const s=students.find(x=>x.id===id);if(!s)return;
-  const msg=prompt(`Send SMS to ${s.parentName} (${s.phoneNumber}):\n\nEnter message:`);
-  if(!msg)return;showSMSPrev([s],msg);
-}
-function showBulkSMS(){
-  const msg=prompt('Message to ALL parents:');if(!msg)return;
-  showSMSPrev(students.filter(s=>s.phoneNumber),msg);
-}
-function showSelSMS(){
-  document.getElementById('smsMBody').innerHTML=`
-    <h3 style="color:var(--gold);margin-bottom:14px">Select Students</h3>
-    <div style="display:flex;gap:7px;margin-bottom:10px">
-      <button class="btn btn-ghost btn-sm" onclick="document.querySelectorAll('.scb').forEach(c=>c.checked=true)">All</button>
-      <button class="btn btn-ghost btn-sm" onclick="document.querySelectorAll('.scb').forEach(c=>c.checked=false)">None</button>
+    <div style="background:rgba(30,63,110,.05);border-radius:9px;padding:14px;text-align:left;font-size:.82rem;color:var(--text-mid);margin-bottom:18px">
+      <p>&#10003; All ${cur} data will be <b>archived and preserved</b></p>
+      <p style="margin-top:5px">&#10003; Use &#8679; Upgrade button on each student to re-register</p>
+      <p style="margin-top:5px">&#10003; Bills and attendance records remain accessible</p>
     </div>
-    <div class="checklist">${students.filter(s=>s.phoneNumber).map(s=>`<label class="ci">
-      <input type="checkbox" class="scb" value="${s.id}">
-      <span><strong>${s.name}</strong> · ${s.parentName} · ${s.phoneNumber} · Class ${s.class}</span>
-    </label>`).join('')}</div>
-    <div class="fg" style="margin-top:14px"><label>Message</label>
-      <textarea id="selMsg" class="fc" rows="3" placeholder="Enter message..."></textarea></div>
-    <div class="brow">
-      <button class="btn btn-gold" onclick="sendSel()">Send →</button>
-      <button class="btn btn-ghost" onclick="closeM('smsModal')">Cancel</button>
-    </div>`;
-  openM('smsModal');
-}
-function sendSel(){
-  const ids=[...document.querySelectorAll('.scb:checked')].map(c=>parseInt(c.value));
-  const msg=document.getElementById('selMsg').value.trim();
-  if(!ids.length||!msg){toast('Select students and enter message');return;}
-  closeM('smsModal');
-  showSMSPrev(students.filter(s=>ids.includes(s.id)),msg);
-}
-function showSMSPrev(list,msg){
-  document.getElementById('smsMBody').innerHTML=`
-    <div style="background:rgba(255,255,255,.05);border-radius:8px;padding:14px;margin-bottom:14px">
-      <p style="color:var(--muted);font-size:.79em;margin-bottom:6px">MESSAGE</p>
-      <p>${msg}</p>
+    <div style="display:flex;gap:9px;justify-content:center">
+      <button class="btn btn-g" onclick="startSess('${nxt}')">&#8679; Start ${nxt}</button>
+      <button class="btn btn-o" onclick="clsM('sessM')">Cancel</button>
     </div>
-    <p style="color:var(--muted);font-size:.82em;margin-bottom:10px">${list.length} recipient(s)</p>
-    <div class="checklist" style="max-height:180px">${list.map(s=>`<div class="ci" style="pointer-events:none"><span>✓</span><span>${s.name} · ${s.phoneNumber}</span></div>`).join('')}</div>
-    <div style="background:rgba(243,156,18,.08);border:1px solid rgba(243,156,18,.28);border-radius:8px;padding:13px;margin-top:14px;font-size:.83em;color:rgba(255,255,255,.7)">
-      ⚠️ Integrate with <strong>MSG91 / Fast2SMS / Twilio</strong> for actual SMS delivery.
-    </div>
-    <div class="brow">
-      <button class="btn btn-gold" onclick="copyNums(${JSON.stringify(list.map(s=>s.phoneNumber))})">📋 Copy Numbers</button>
-      <button class="btn btn-ghost" onclick="closeM('smsModal')">Close</button>
-    </div>`;
-  openM('smsModal');
+  </div>`;
+  opM('sessM');
 }
-function copyNums(nums){navigator.clipboard.writeText(nums.join(', ')).then(()=>toast('📋 Numbers copied!'));}
-
-// ══ MODAL HELPERS ══
-function openM(id){document.getElementById(id).classList.add('open');}
-function closeM(id){document.getElementById(id).classList.remove('open');}
-document.querySelectorAll('.moverlay').forEach(m=>{m.addEventListener('click',e=>{if(e.target===m)m.classList.remove('open');});});
-
-// ══ INIT ══
-displayStudents();renderBH();renderTodayAtt();
+function startSess(ns){
+  if(!db.sessions.includes(db.cur))db.sessions.push(db.cur);
+  db.cur=ns;document.getElementById('sessTag').textContent='Session '+ns;sv();
+  clsM('sessM');renderSess();toast('Session '+ns+' started!','suc',4000);
+  const sel=document.getElementById('fSess'),o=document.createElement('option');o.value=ns;o.textContent='Session '+ns;sel.insertBefore(o,sel.options[1]);
+}
 </script>
 </body>
 </html>
