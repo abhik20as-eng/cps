@@ -144,10 +144,16 @@ body{font-family:'DM Sans',sans-serif;background:var(--cream);color:var(--text-d
 </div>
 
 <!-- LOGIN PAGE -->
-       <div class="fg">
-  <label>Username</label>
-  <input type="email" id="loginUser" required placeholder="Enter email">
-</div>
+      <!-- LOGIN PAGE -->
+<div id="loginPage" class="login-wrap">
+  <div class="login-box">
+    <h1>Central Public School</h1>
+    <p>Management System Login</p>
+    <form id="loginForm" onsubmit="doLogin(event)">
+      <div class="fg">
+        <label>Username</label>
+        <input type="email" id="loginUser" required placeholder="Enter email">
+      </div>
       <div class="fg">
         <label>Password</label>
         <input type="password" id="loginPass" required placeholder="Enter password">
@@ -155,9 +161,10 @@ body{font-family:'DM Sans',sans-serif;background:var(--cream);color:var(--text-d
       <button type="submit" class="btn btn-p" style="width:100%;justify-content:center">Login</button>
     </form>
     <p style="margin-top:20px;font-size:.78rem;color:var(--text-mid);text-align:center">
-  New user? Enter email and password (min 6 chars) to auto-create account
-</p>
+      New user? Enter email and password (min 6 chars) to auto-create account
+    </p>
   </div>
+</div>
 </div>
 
 <!-- MAIN APP -->
