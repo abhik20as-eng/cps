@@ -670,13 +670,20 @@ async function saveStudent(student) {
 
 async function saveAttendance(date, data) {
   if (!auth.currentUser) return;
+
   try {
-    await setDoc(doc(db, 'users', auth.currentUser.uid, 'attendance', date), data);
+    const ref = doc(db, 'users', auth.currentUser.uid, 'attendance', date);
+
+    // 🔥 Use merge so only changed student updates
+    await setDoc(ref, data, { merge: true });
+
   } catch (error) {
     console.error('Error saving attendance:', error);
     throw error;
   }
 }
+
+
 
 async function saveBillToDb(bill) {
   if (!auth.currentUser) return;
