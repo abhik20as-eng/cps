@@ -930,20 +930,45 @@ window.generateQRDownload = function(){
 // ===== ATTENDANCE =====
 window.markFromQR = async function(r){
   const s=dbCache.students.find(s=>s.rollNumber===r);
-  if(!s){alert('Student not found: '+r);return;}
+  if(!s){
+    toast('Student not found: '+r, 'err', 5000);
+    // Remove the URL parameter
+    window.history.replaceState({}, document.title, window.location.pathname);
+    return;
+  }
+  
   const td=new Date().toISOString().split('T')[0];
   if(!dbCache.attendance[td])dbCache.attendance[td]={};
-  if(dbCache.attendance[td][r]){alert('Already marked!\n👤 '+s.name+'\n📝 '+r+'\n🕐 '+dbCache.attendance[td][r].time);return;}
+  
+  if(dbCache.attendance[td][r]){
+    toast('Already marked! '+s.name+' at '+dbCache.attendance[td][r].time, 'wrn', 5000);
+    // Remove the URL parameter
+    window.history.replaceState({}, document.title, window.location.pathname);
+    return;
+  }
+  
   const time=new Date().toLocaleTimeString('en-IN');
   dbCache.attendance[td][r]={name:s.name,class:s.class,time};
   
   showLoader();
   try {
     await saveAttendance(td, dbCache.attendance[td]);
-    alert('Attendance Marked!\n👤 '+s.name+'\n📝 Roll: '+r+'\n📚 Class '+s.class+'\n🕐 '+time);
-    renderDash();renderAttR();
+    
+    // Update UI immediately
+    renderDash();
+    renderAttR();
+    
+    // Show success message
+    toast('✓ Attendance Marked! '+s.name+' (Class '+s.class+') at '+time, 'suc', 5000);
+    
+    // Navigate to attendance page to show the result
+    goP('attendance', document.querySelector('[onclick*="attendance"]'));
+    
+    // Remove the URL parameter
+    window.history.replaceState({}, document.title, window.location.pathname);
+    
   } catch (error) {
-    toast('Error saving','err');
+    toast('Error saving attendance','err');
   }
   hideLoader();
 };
