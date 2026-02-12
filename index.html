@@ -6,7 +6,15 @@
 <title>Central Public School — Management System</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;800;900&family=DM+Sans:wght@300;400;500;600;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style></style>
+
+<!-- ADD LOADER STYLES -->
 <style>
+.loader{position:fixed;inset:0;background:rgba(255,255,255,.95);display:none;align-items:center;justify-content:center;z-index:9999;flex-direction:column;gap:16px}
+.loader.show{display:flex}
+.spinner{width:50px;height:50px;border:4px solid var(--border);border-top-color:var(--royal);border-radius:50%;animation:spin 1s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+</style>
 :root{--navy:#0f1b2d;--deep:#1a2d4a;--royal:#1e3f6e;--gold:#c9a84c;--gold-light:#e8c96a;--cream:#faf8f3;--white:#fff;--success:#2d9b5a;--danger:#c0392b;--warning:#e67e22;--info:#2471a3;--text-dark:#0f1b2d;--text-mid:#3d5a80;--text-light:#6b8cae;--border:#dde4ed;--shadow:0 4px 24px rgba(15,27,45,.10);--shadow-lg:0 12px 48px rgba(15,27,45,.18)}
 *,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
 body{font-family:'DM Sans',sans-serif;background:var(--cream);color:var(--text-dark);min-height:100vh}
@@ -125,17 +133,19 @@ body{font-family:'DM Sans',sans-serif;background:var(--cream);color:var(--text-d
 </head>
 <body>
 
+<body>
+
+<!-- ADD LOADER -->
+<div id="loader" class="loader">
+  <div class="spinner"></div>
+  <p style="color:var(--text-mid);font-size:.9rem;font-weight:500">Loading...</p>
+</div>
+
 <!-- LOGIN PAGE -->
-<div id="loginPage" class="login-wrap">
-  <div class="login-box">
-    <div class="logo-icon" style="margin:0 auto 16px;width:60px;height:60px;font-size:28px">🎓</div>
-    <h1>Central Public School</h1>
-    <p>Management System Login</p>
-    <form id="loginForm" onsubmit="doLogin(event)">
-      <div class="fg">
-        <label>Username</label>
-        <input type="text" id="loginUser" required placeholder="Enter username">
-      </div>
+       <div class="fg">
+  <label>Username</label>
+  <input type="email" id="loginUser" required placeholder="Enter email">
+</div>
       <div class="fg">
         <label>Password</label>
         <input type="password" id="loginPass" required placeholder="Enter password">
@@ -143,8 +153,8 @@ body{font-family:'DM Sans',sans-serif;background:var(--cream);color:var(--text-d
       <button type="submit" class="btn btn-p" style="width:100%;justify-content:center">Login</button>
     </form>
     <p style="margin-top:20px;font-size:.78rem;color:var(--text-mid);text-align:center">
-      First time setup: Enter any username and password to create your account
-    </p>
+  New user? Enter email and password (min 6 chars) to auto-create account
+</p>
   </div>
 </div>
 
@@ -158,10 +168,11 @@ body{font-family:'DM Sans',sans-serif;background:var(--cream);color:var(--text-d
       <span>Management System</span>
     </div>
   </div>
-  <div style="display:flex;align-items:center;gap:8px">
-    <span class="sess-tag" id="sessTag">Session 2026–27</span>
-    <button class="btn btn-d btn-sm" onclick="logout()">Logout</button>
-  </div>
+ <div style="display:flex;align-items:center;gap:8px">
+  <span class="sess-tag" id="sessTag">Session 2026–27</span>
+  <span style="font-size:.7rem;color:var(--gold-light)" id="userEmail"></span>
+  <button class="btn btn-d btn-sm" onclick="logout()">Logout</button>
+</div>
 </header>
 
 <div class="app">
@@ -441,99 +452,264 @@ body{font-family:'DM Sans',sans-serif;background:var(--cream);color:var(--text-d
 <div class="twrap" id="twrap"></div>
 <div id="pr" style="display:none"></div>
 
-<script>
-const MO=['','January','February','March','April','May','June','July','August','September','October','November','December'];
+<script type="module">
+// ===== FIREBASE IMPORTS =====
+import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js';
+import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, onAuthStateChanged, updatePassword } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js';
+import { getFirestore, collection, addDoc, getDocs, getDoc, doc, setDoc, deleteDoc } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js';
 
-let db={
-  students:JSON.parse(localStorage.getItem('cps_s'))||[],
-  attendance:JSON.parse(localStorage.getItem('cps_a'))||{},
-  bills:JSON.parse(localStorage.getItem('cps_b'))||[],
-  sessions:JSON.parse(localStorage.getItem('cps_ss'))||[],
-  notices:JSON.parse(localStorage.getItem('cps_notices'))||[],
-  cur:localStorage.getItem('cps_cur')||'2026-27',
-  auth:JSON.parse(localStorage.getItem('cps_auth'))||null
+// ===== FIREBASE CONFIG =====
+const firebaseConfig = {
+  apiKey: "AIzaSyDA67oWl6Kq1kNXLylumXlC7YV5tgrsnBs",
+  authDomain: "central-public-school-1cd53.firebaseapp.com",
+  projectId: "central-public-school-1cd53",
+  storageBucket: "central-public-school-1cd53.firebasestorage.app",
+  messagingSenderId: "490014133859",
+  appId: "1:490014133859:web:f89fe318d46e3e768c3256"
 };
 
-function sv(){
-  localStorage.setItem('cps_s',JSON.stringify(db.students));
-  localStorage.setItem('cps_a',JSON.stringify(db.attendance));
-  localStorage.setItem('cps_b',JSON.stringify(db.bills));
-  localStorage.setItem('cps_ss',JSON.stringify(db.sessions));
-  localStorage.setItem('cps_notices',JSON.stringify(db.notices));
-  localStorage.setItem('cps_cur',db.cur);
-  localStorage.setItem('cps_auth',JSON.stringify(db.auth));
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const db = getFirestore(app);
+
+// ===== GLOBAL VARIABLES =====
+const MO=['','January','February','March','April','May','June','July','August','September','October','November','December'];
+
+let dbCache = {
+  students: [],
+  attendance: {},
+  bills: [],
+  sessions: [],
+  notices: [],
+  cur: '2026-27'
+};
+
+let currentUser = null;
+
+// ===== HELPER FUNCTIONS =====
+function showLoader(){document.getElementById('loader').classList.add('show');}
+function hideLoader(){document.getElementById('loader').classList.remove('show');}
+
+window.toast = function(msg,type='inf',dur=3000){
+  const w=document.getElementById('twrap'),t=document.createElement('div');
+  t.className='toast '+type;
+  t.innerHTML=(type==='suc'?'✓':type==='err'?'✗':'ℹ')+' '+msg;
+  w.appendChild(t);setTimeout(()=>t.remove(),dur);
+};
+
+// ===== AUTHENTICATION =====
+onAuthStateChanged(auth, async (user) => {
+  if (user) {
+    currentUser = user;
+    document.getElementById('userEmail').textContent = user.email;
+    await loadAllData();
+    showApp();
+  } else {
+    currentUser = null;
+    document.getElementById('mainApp').style.display='none';
+    document.getElementById('loginPage').style.display='flex';
+  }
+  hideLoader();
+});
+
+window.doLogin = async function(e) {
+  e.preventDefault();
+  showLoader();
+  const email = document.getElementById('loginUser').value.trim();
+  const password = document.getElementById('loginPass').value;
+  
+  try {
+    await signInWithEmailAndPassword(auth, email, password);
+    toast('Login successful!','suc');
+  } catch (error) {
+    if (error.code === 'auth/user-not-found' || error.code === 'auth/invalid-credential') {
+      try {
+        await createUserWithEmailAndPassword(auth, email, password);
+        await setDoc(doc(db, 'settings', auth.currentUser.uid), {
+          currentSession: '2026-27',
+          sessions: [],
+          createdAt: new Date().toISOString()
+        });
+        toast('Account created!','suc');
+      } catch (createError) {
+        toast('Error: ' + createError.message,'err');
+        hideLoader();
+      }
+    } else {
+      toast('Login failed: ' + error.message,'err');
+      hideLoader();
+    }
+  }
+};
+
+window.logout = async function() {
+  if(!confirm('Logout?')) return;
+  showLoader();
+  try {
+    await signOut(auth);
+    document.getElementById('loginForm').reset();
+    toast('Logged out','inf');
+  } catch (error) {
+    toast('Logout failed','err');
+  }
+  hideLoader();
+};
+
+window.changePassword = async function() {
+  const newP = document.getElementById('newPass').value;
+  const confirm = document.getElementById('confirmPass').value;
+  
+  if(!newP || !confirm) {
+    toast('Please fill all fields','err');
+    return;
+  }
+  
+  if(newP !== confirm) {
+    toast('Passwords do not match','err');
+    return;
+  }
+  
+  if(newP.length < 6) {
+    toast('Password must be at least 6 characters','err');
+    return;
+  }
+  
+  showLoader();
+  try {
+    await updatePassword(auth.currentUser, newP);
+    toast('Password changed!','suc');
+    document.getElementById('currentPass').value='';
+    document.getElementById('newPass').value='';
+    document.getElementById('confirmPass').value='';
+  } catch (error) {
+    toast('Error: Re-login and try again','err');
+  }
+  hideLoader();
+};
+
+// ===== DATA LOADING =====
+async function loadAllData() {
+  showLoader();
+  try {
+    const uid = auth.currentUser.uid;
+    
+    // Load settings
+    const settingsDoc = await getDoc(doc(db, 'settings', uid));
+    if (settingsDoc.exists()) {
+      const settingsData = settingsDoc.data();
+      dbCache.cur = settingsData.currentSession || '2026-27';
+      dbCache.sessions = settingsData.sessions || [];
+    }
+    
+    // Load students
+    const studentsSnap = await getDocs(collection(db, 'users', uid, 'students'));
+    dbCache.students = studentsSnap.docs.map(doc => ({id: doc.id, ...doc.data()}));
+    
+    // Load attendance
+    const attendanceSnap = await getDocs(collection(db, 'users', uid, 'attendance'));
+    dbCache.attendance = {};
+    attendanceSnap.docs.forEach(doc => {
+      dbCache.attendance[doc.id] = doc.data();
+    });
+    
+    // Load bills
+    const billsSnap = await getDocs(collection(db, 'users', uid, 'bills'));
+    dbCache.bills = billsSnap.docs.map(doc => ({id: doc.id, ...doc.data()}));
+    
+    // Load notices
+    const noticesSnap = await getDocs(collection(db, 'users', uid, 'notices'));
+    dbCache.notices = noticesSnap.docs.map(doc => ({id: doc.id, ...doc.data()}));
+    
+  } catch (error) {
+    console.error('Error loading data:', error);
+    toast('Error loading data','err');
+  }
+  hideLoader();
 }
 
-// Auth
-function doLogin(e){
-  e.preventDefault();
-  const user=document.getElementById('loginUser').value.trim();
-  const pass=document.getElementById('loginPass').value;
-  
-  if(!db.auth){
-    db.auth={username:user,password:pass};
-    sv();
-    toast('Account created successfully!','suc');
-    showApp();
-  }else{
-    if(db.auth.username===user&&db.auth.password===pass){
-      showApp();
-    }else{
-      toast('Invalid credentials!','err');
-    }
+async function saveSettings() {
+  if (!auth.currentUser) return;
+  try {
+    await setDoc(doc(db, 'settings', auth.currentUser.uid), {
+      currentSession: dbCache.cur,
+      sessions: dbCache.sessions,
+      updatedAt: new Date().toISOString()
+    });
+  } catch (error) {
+    console.error('Error saving settings:', error);
   }
 }
 
+async function saveStudent(student) {
+  if (!auth.currentUser) return;
+  try {
+    const uid = auth.currentUser.uid;
+    if (student.id) {
+      const {id, ...data} = student;
+      await setDoc(doc(db, 'users', uid, 'students', id), data);
+    } else {
+      const {id, ...data} = student;
+      const docRef = await addDoc(collection(db, 'users', uid, 'students'), data);
+      student.id = docRef.id;
+    }
+    return student;
+  } catch (error) {
+    console.error('Error saving student:', error);
+    throw error;
+  }
+}
+
+async function saveAttendance(date, data) {
+  if (!auth.currentUser) return;
+  try {
+    await setDoc(doc(db, 'users', auth.currentUser.uid, 'attendance', date), data);
+  } catch (error) {
+    console.error('Error saving attendance:', error);
+    throw error;
+  }
+}
+
+async function saveBillToDb(bill) {
+  if (!auth.currentUser) return;
+  try {
+    const uid = auth.currentUser.uid;
+    if (bill.id) {
+      const {id, ...data} = bill;
+      await setDoc(doc(db, 'users', uid, 'bills', id), data);
+    } else {
+      const {id, ...data} = bill;
+      const docRef = await addDoc(collection(db, 'users', uid, 'bills'), data);
+      bill.id = docRef.id;
+    }
+    return bill;
+  } catch (error) {
+    console.error('Error saving bill:', error);
+    throw error;
+  }
+}
+
+async function saveNoticeToDb(notice) {
+  if (!auth.currentUser) return;
+  try {
+    const {id, ...data} = notice;
+    const docRef = await addDoc(collection(db, 'users', auth.currentUser.uid, 'notices'), data);
+    notice.id = docRef.id;
+    return notice;
+  } catch (error) {
+    console.error('Error saving notice:', error);
+    throw error;
+  }
+}
+
+// ===== APP INITIALIZATION =====
 function showApp(){
   document.getElementById('loginPage').style.display='none';
   document.getElementById('mainApp').style.display='block';
   init();
 }
 
-function logout(){
-  if(confirm('Are you sure you want to logout?')){
-    document.getElementById('mainApp').style.display='none';
-    document.getElementById('loginPage').style.display='flex';
-    document.getElementById('loginForm').reset();
-  }
-}
-
-function changePassword(){
-  const current=document.getElementById('currentPass').value;
-  const newP=document.getElementById('newPass').value;
-  const confirm=document.getElementById('confirmPass').value;
-  
-  if(!current||!newP||!confirm){
-    toast('Please fill all fields','err');
-    return;
-  }
-  
-  if(current!==db.auth.password){
-    toast('Current password is incorrect','err');
-    return;
-  }
-  
-  if(newP!==confirm){
-    toast('New passwords do not match','err');
-    return;
-  }
-  
-  if(newP.length<4){
-    toast('Password must be at least 4 characters','err');
-    return;
-  }
-  
-  db.auth.password=newP;
-  sv();
-  toast('Password changed successfully!','suc');
-  document.getElementById('currentPass').value='';
-  document.getElementById('newPass').value='';
-  document.getElementById('confirmPass').value='';
-}
-
-// Auto roll number - starts from 001 for each class
 function getNextRollNumber(cls){
-  const students=db.students.filter(s=>s.class===cls&&s.session===db.cur);
+  const students=dbCache.students.filter(s=>s.class===cls&&s.session===dbCache.cur);
   let maxNum=0;
   students.forEach(s=>{
     const num=parseInt(s.rollNumber);
@@ -542,14 +718,14 @@ function getNextRollNumber(cls){
   return String(maxNum+1).padStart(3,'0');
 }
 
-function updateRollPreview(){
+window.updateRollPreview = function(){
   const cls=document.getElementById('rc').value;
   if(cls){
     document.getElementById('rr').value=getNextRollNumber(cls);
   }else{
     document.getElementById('rr').value='';
   }
-}
+};
 
 function init(){
   document.getElementById('rj').valueAsDate=new Date();
@@ -557,7 +733,7 @@ function init(){
   document.getElementById('rDate').valueAsDate=new Date();
   const m=new Date().getMonth()+1;
   ['bMo','ovMo'].forEach(id=>{const e=document.getElementById(id);if(e)e.value=m;});
-  document.getElementById('sessTag').textContent='Session '+db.cur;
+  document.getElementById('sessTag').textContent='Session '+dbCache.cur;
   populateFSess();
   renderDash();renderStudents();renderAttR();renderSess();renderNotices();
   
@@ -568,10 +744,10 @@ function init(){
 function populateFSess(){
   const s=document.getElementById('fSess');
   s.innerHTML='<option value="">All Sessions</option>';
-  [...new Set(db.students.map(x=>x.session).filter(Boolean))].sort().reverse().forEach(x=>{const o=document.createElement('option');o.value=x;o.textContent='Session '+x;s.appendChild(o);});
+  [...new Set(dbCache.students.map(x=>x.session).filter(Boolean))].sort().reverse().forEach(x=>{const o=document.createElement('option');o.value=x;o.textContent='Session '+x;s.appendChild(o);});
 }
 
-function goP(n,el){
+window.goP = function(n,el){
   document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
   document.querySelectorAll('.ni').forEach(x=>x.classList.remove('active'));
   document.getElementById('page-'+n).classList.add('active');
@@ -582,32 +758,30 @@ function goP(n,el){
   if(n==='sessions')renderSess();
   if(n==='billing')renderHist();
   if(n==='notices')renderNotices();
-}
+};
 
-function swBTab(n,el){
+window.swBTab = function(n,el){
   document.querySelectorAll('#page-billing .stab').forEach(t=>t.classList.remove('active'));
   document.querySelectorAll('#page-billing .tp').forEach(t=>t.classList.remove('active'));
   document.getElementById('bt-'+n).classList.add('active');el.classList.add('active');
   if(n==='hist')renderHist();if(n==='ov')renderOv();
-}
+};
 
-function toast(msg,type='inf',dur=3000){
-  const w=document.getElementById('twrap'),t=document.createElement('div');
-  t.className='toast '+type;
-  t.innerHTML=(type==='suc'?'✓':type==='err'?'✗':'ℹ')+' '+msg;
-  w.appendChild(t);setTimeout(()=>t.remove(),dur);
-}
+window.opM = function(id){document.getElementById(id).classList.add('open');};
+window.clsM = function(id){document.getElementById(id).classList.remove('open');};
 
-function opM(id){document.getElementById(id).classList.add('open');}
-function clsM(id){document.getElementById(id).classList.remove('open');}
-
-function regStudent(e){
+// ===== STUDENT MANAGEMENT =====
+window.regStudent = async function(e){
   e.preventDefault();
+  showLoader();
   const roll=document.getElementById('rr').value.trim();
   const cls=document.getElementById('rc').value;
-  if(db.students.find(s=>s.rollNumber===roll&&s.class===cls&&s.session===db.cur)){toast('Roll number exists in this class!','err');return;}
+  if(dbCache.students.find(s=>s.rollNumber===roll&&s.class===cls&&s.session===dbCache.cur)){
+    toast('Roll number exists!','err');
+    hideLoader();
+    return;
+  }
   const s={
-    id:Date.now(),
     name:document.getElementById('rn').value.trim(),
     rollNumber:roll,
     dob:document.getElementById('rd').value,
@@ -617,57 +791,79 @@ function regStudent(e){
     joiningDate:document.getElementById('rj').value,
     monthlyFee:parseFloat(document.getElementById('rf').value),
     address:document.getElementById('ra').value.trim(),
-    session:db.cur
+    session:dbCache.cur,
+    createdAt: new Date().toISOString()
   };
-  db.students.push(s);sv();toast('Registered: '+s.name,'suc');
-  document.getElementById('sForm').reset();
-  document.getElementById('rj').valueAsDate=new Date();
-  renderStudents();renderDash();
-}
+  
+  try {
+    const saved = await saveStudent(s);
+    dbCache.students.push(saved);
+    toast('Registered: '+s.name,'suc');
+    document.getElementById('sForm').reset();
+    document.getElementById('rj').valueAsDate=new Date();
+    renderStudents();renderDash();
+  } catch (error) {
+    toast('Error registering','err');
+  }
+  hideLoader();
+};
 
-function clrForm(){
+window.clrForm = function(){
   document.getElementById('sForm').reset();
   document.getElementById('rj').valueAsDate=new Date();
   document.getElementById('rr').value='';
-}
+};
 
-function getAP(r){let t=0,p=0;for(let d in db.attendance){t++;if(db.attendance[d][r])p++;}return t?Math.round(p/t*100):0;}
+function getAP(r){let t=0,p=0;for(let d in dbCache.attendance){t++;if(dbCache.attendance[d][r])p++;}return t?Math.round(p/t*100):0;}
 
 function renderDash(){
-  const td=new Date().toISOString().split('T')[0],ta=db.attendance[td]||{};
-  const ss=db.students.filter(s=>s.session===db.cur),pr=ss.filter(s=>ta[s.rollNumber]).length;
+  const td=new Date().toISOString().split('T')[0],ta=dbCache.attendance[td]||{};
+  const ss=dbCache.students.filter(s=>s.session===dbCache.cur),pr=ss.filter(s=>ta[s.rollNumber]).length;
   const m=new Date().getMonth()+1,y=new Date().getFullYear();
-  const mb=db.bills.filter(b=>b.month==m&&b.year==y),col=mb.reduce((a,b)=>a+b.total,0);
+  const mb=dbCache.bills.filter(b=>b.month==m&&b.year==y),col=mb.reduce((a,b)=>a+b.total,0);
   document.getElementById('dStats').innerHTML=`<div class="sbox"><div class="sic si-b">👥</div><div class="snum">${ss.length}</div><div class="slbl">Total Students</div></div><div class="sbox"><div class="sic si-g">✓</div><div class="snum">${pr}</div><div class="slbl">Present Today</div></div><div class="sbox"><div class="sic si-r">⚠</div><div class="snum">${ss.length-pr}</div><div class="slbl">Absent Today</div></div><div class="sbox"><div class="sic si-gold">💰</div><div class="snum">₹${col.toLocaleString('en-IN')}</div><div class="slbl">Collected This Month</div></div>`;
   const ae=document.getElementById('dAtt'),plist=ss.filter(s=>ta[s.rollNumber]).slice(0,5);
   ae.innerHTML=plist.length?plist.map(s=>`<div class="ac pres" style="margin-bottom:7px"><div class="an">${s.name}</div><div class="as">Class ${s.class} · ${s.rollNumber}</div><div class="at">🕐 ${ta[s.rollNumber].time}</div></div>`).join('')+(pr>5?`<p style="color:var(--text-light);font-size:.75rem;margin-top:6px">+${pr-5} more...</p>`:''):'<div class="empty" style="padding:16px 0"><div class="ei">📋</div><p>No attendance today</p></div>';
-  const be=document.getElementById('dBills'),rb=[...db.bills].sort((a,b)=>b.createdAt-a.createdAt).slice(0,5);
+  const be=document.getElementById('dBills'),rb=[...dbCache.bills].sort((a,b)=>new Date(b.createdAt)-new Date(a.createdAt)).slice(0,5);
   be.innerHTML=rb.length?rb.map(b=>`<div style="display:flex;gap:10px;padding:8px;background:var(--cream);border-radius:7px;margin-bottom:5px"><div style="flex:1"><div style="font-size:.82rem;font-weight:600;color:var(--navy)">${b.studentName}</div><div style="font-size:.7rem;color:var(--text-light)">${MO[b.month]} ${b.year} · Class ${b.studentClass}</div></div><div style="font-family:'DM Mono',monospace;font-size:.82rem;font-weight:600;color:var(--navy)">₹${b.total.toLocaleString('en-IN')}</div></div>`).join(''):'<div class="empty" style="padding:16px 0"><div class="ei">💳</div><p>No bills yet</p></div>';
 }
 
 function renderStudents(){
   const srch=(document.getElementById('srch')?.value||'').toLowerCase(),cls=document.getElementById('fCls')?.value||'',sess=document.getElementById('fSess')?.value||'';
-  let list=db.students.filter(s=>{if(cls&&s.class!==cls)return false;if(sess&&s.session!==sess)return false;if(srch&&!s.name.toLowerCase().includes(srch)&&!s.rollNumber.toLowerCase().includes(srch))return false;return true;});
+  let list=dbCache.students.filter(s=>{if(cls&&s.class!==cls)return false;if(sess&&s.session!==sess)return false;if(srch&&!s.name.toLowerCase().includes(srch)&&!s.rollNumber.toLowerCase().includes(srch))return false;return true;});
   document.getElementById('scnt').textContent=list.length;
   const g=document.getElementById('sGrid');
   if(!list.length){g.innerHTML='<div class="empty"><div class="ei">👤</div><h4>No students found</h4></div>';return;}
   g.innerHTML=list.map(s=>{
-    const ap=getAP(s.rollNumber),init=s.name.split(' ').map(w=>w[0]).join('').substring(0,2).toUpperCase(),pm=db.bills.filter(b=>b.studentId===s.id).length;
-    return`<div class="sc"><div class="av">${init}</div><div class="sm"><h3>${s.name} <span class="bdg bdg-c">Class ${s.class}</span> <span class="bdg bdg-s">${s.session}</span></h3><div class="sub"><span>📋 ${s.rollNumber}</span><span>👪 ${s.parentName}</span><span>📱 ${s.phoneNumber}</span></div><div style="margin-top:5px;display:flex;align-items:center;gap:9px"><div style="flex:1;background:#e9ecef;border-radius:20px;height:5px;max-width:140px"><div style="background:${ap>=75?'var(--success)':ap>=50?'var(--warning)':'var(--danger)'};width:${ap}%;height:5px;border-radius:20px"></div></div><span style="font-size:.7rem;color:var(--text-light)">${ap}% · ${pm} bills</span></div></div><div class="sa"><button class="btn btn-i btn-xs" onclick="showQR(${s.id})">QR Code</button><button class="btn btn-g btn-xs" onclick="qkBill(${s.id})">Bill</button><button class="btn btn-d btn-xs" onclick="delStu(${s.id})">🗑</button></div></div>`;
+    const ap=getAP(s.rollNumber),init=s.name.split(' ').map(w=>w[0]).join('').substring(0,2).toUpperCase(),pm=dbCache.bills.filter(b=>b.studentId===s.id).length;
+    return`<div class="sc"><div class="av">${init}</div><div class="sm"><h3>${s.name} <span class="bdg bdg-c">Class ${s.class}</span> <span class="bdg bdg-s">${s.session}</span></h3><div class="sub"><span>📋 ${s.rollNumber}</span><span>👪 ${s.parentName}</span><span>📱 ${s.phoneNumber}</span></div><div style="margin-top:5px;display:flex;align-items:center;gap:9px"><div style="flex:1;background:#e9ecef;border-radius:20px;height:5px;max-width:140px"><div style="background:${ap>=75?'var(--success)':ap>=50?'var(--warning)':'var(--danger)'};width:${ap}%;height:5px;border-radius:20px"></div></div><span style="font-size:.7rem;color:var(--text-light)">${ap}% · ${pm} bills</span></div></div><div class="sa"><button class="btn btn-i btn-xs" onclick="showQR('${s.id}')">QR Code</button><button class="btn btn-g btn-xs" onclick="qkBill('${s.id}')">Bill</button><button class="btn btn-d btn-xs" onclick="delStu('${s.id}')">🗑</button></div></div>`;
   }).join('');
 }
 
-function delStu(id){if(!confirm('Delete this student?'))return;db.students=db.students.filter(s=>s.id!==id);sv();renderStudents();renderDash();toast('Deleted','inf');}
+window.delStu = async function(id){
+  if(!confirm('Delete?'))return;
+  showLoader();
+  try {
+    await deleteDoc(doc(db, 'users', auth.currentUser.uid, 'students', id));
+    dbCache.students=dbCache.students.filter(s=>s.id!==id);
+    renderStudents();renderDash();
+    toast('Deleted','inf');
+  } catch (error) {
+    toast('Error deleting','err');
+  }
+  hideLoader();
+};
 
-function qkBill(id){
+window.qkBill = function(id){
   goP('billing',document.querySelector('[onclick*=\'billing\']'));
-  setTimeout(()=>{const s=db.students.find(s=>s.id===id);if(!s)return;document.getElementById('bCls').value=s.class;loadBStu();setTimeout(()=>{document.getElementById('bStu').value=id;loadSBill();},110);},180);
-}
+  setTimeout(()=>{const s=dbCache.students.find(s=>s.id===id);if(!s)return;document.getElementById('bCls').value=s.class;loadBStu();setTimeout(()=>{document.getElementById('bStu').value=id;loadSBill();},110);},180);
+};
 
+// ===== QR CODE =====
 const BU=window.location.href.split('?')[0];
 
-function showQR(id){
-  const s=db.students.find(s=>s.id===id);if(!s)return;
+window.showQR = function(id){
+  const s=dbCache.students.find(s=>s.id===id);if(!s)return;
   const url=BU+'?attendance='+s.rollNumber;
   document.getElementById('qrMT').textContent=s.name+' — QR Code';
   document.getElementById('qrMB').innerHTML=`<div style="text-align:center">
@@ -684,22 +880,22 @@ function showQR(id){
       colorLight:'#ffffff'
     });
   },100);
-}
+};
 
-function prQR(){
+window.prQR = function(){
   const c=document.getElementById('qrCS'),pr=document.getElementById('pr');
   pr.innerHTML='<div style="padding:28px;text-align:center">'+c.outerHTML+'</div>';
   pr.style.display='block';window.print();pr.style.display='none';pr.innerHTML='';
-}
+};
 
-function showDownloadQR(){
+window.showDownloadQR = function(){
   opM('downloadQrM');
-}
+};
 
-function generateQRDownload(){
+window.generateQRDownload = function(){
   const cls=document.getElementById('dlQrCls').value;
-  const sess=document.getElementById('fSess')?.value||db.cur;
-  const list=db.students.filter(s=>{
+  const sess=document.getElementById('fSess')?.value||dbCache.cur;
+  const list=dbCache.students.filter(s=>{
     if(s.session!==sess)return false;
     if(cls&&s.class!==cls)return false;
     return true;
@@ -720,35 +916,57 @@ function generateQRDownload(){
       });
     });
   },130);
-}
+};
 
-function markFromQR(r){
-  const s=db.students.find(s=>s.rollNumber===r);
+// ===== ATTENDANCE =====
+window.markFromQR = async function(r){
+  const s=dbCache.students.find(s=>s.rollNumber===r);
   if(!s){alert('Student not found: '+r);return;}
   const td=new Date().toISOString().split('T')[0];
-  if(!db.attendance[td])db.attendance[td]={};
-  if(db.attendance[td][r]){alert('Already marked!\n👤 '+s.name+'\n📝 '+r+'\n🕐 '+db.attendance[td][r].time);return;}
+  if(!dbCache.attendance[td])dbCache.attendance[td]={};
+  if(dbCache.attendance[td][r]){alert('Already marked!\n👤 '+s.name+'\n📝 '+r+'\n🕐 '+dbCache.attendance[td][r].time);return;}
   const time=new Date().toLocaleTimeString('en-IN');
-  db.attendance[td][r]={name:s.name,class:s.class,time};sv();
-  alert('Attendance Marked!\n👤 '+s.name+'\n📝 Roll: '+r+'\n📚 Class '+s.class+'\n🕐 '+time);
-  renderDash();renderAttR();
-}
+  dbCache.attendance[td][r]={name:s.name,class:s.class,time};
+  
+  showLoader();
+  try {
+    await saveAttendance(td, dbCache.attendance[td]);
+    alert('Attendance Marked!\n👤 '+s.name+'\n📝 Roll: '+r+'\n📚 Class '+s.class+'\n🕐 '+time);
+    renderDash();renderAttR();
+  } catch (error) {
+    toast('Error saving','err');
+  }
+  hideLoader();
+};
 
-function markAtt(){
+window.markAtt = async function(){
   const r=document.getElementById('scanIn').value.trim();if(!r)return;
-  const s=db.students.find(s=>s.rollNumber===r),f=document.getElementById('sFeed');f.style.display='flex';
+  const s=dbCache.students.find(s=>s.rollNumber===r),f=document.getElementById('sFeed');f.style.display='flex';
   if(!s){f.className='sfeed err';f.innerHTML='✗ Not found: <b>'+r+'</b>';}
   else{
-    const td=new Date().toISOString().split('T')[0];if(!db.attendance[td])db.attendance[td]={};
-    if(db.attendance[td][r]){f.className='sfeed wrn';f.innerHTML='⚠ Already marked — <b>'+s.name+'</b> at '+db.attendance[td][r].time;}
-    else{const time=new Date().toLocaleTimeString('en-IN');db.attendance[td][r]={name:s.name,class:s.class,time};sv();renderAttR();renderDash();f.className='sfeed suc';f.innerHTML='✓ <b>'+s.name+'</b> · Class '+s.class+' · 🕐 '+time;}
+    const td=new Date().toISOString().split('T')[0];if(!dbCache.attendance[td])dbCache.attendance[td]={};
+    if(dbCache.attendance[td][r]){f.className='sfeed wrn';f.innerHTML='⚠ Already marked — <b>'+s.name+'</b> at '+dbCache.attendance[td][r].time;}
+    else{
+      const time=new Date().toLocaleTimeString('en-IN');
+      dbCache.attendance[td][r]={name:s.name,class:s.class,time};
+      showLoader();
+      try {
+        await saveAttendance(td, dbCache.attendance[td]);
+        renderAttR();renderDash();
+        f.className='sfeed suc';
+        f.innerHTML='✓ <b>'+s.name+'</b> · Class '+s.class+' · 🕐 '+time;
+      } catch (error) {
+        toast('Error saving','err');
+      }
+      hideLoader();
+    }
   }
   document.getElementById('scanIn').value='';setTimeout(()=>{f.style.display='none';},3500);
-}
+};
 
 function renderAttR(){
   const date=document.getElementById('aDate')?.value,cls=document.getElementById('aCls')?.value||'';if(!date)return;
-  const da=db.attendance[date]||{};let ss=db.students.filter(s=>s.session===db.cur);if(cls)ss=ss.filter(s=>s.class===cls);
+  const da=dbCache.attendance[date]||{};let ss=dbCache.students.filter(s=>s.session===dbCache.cur);if(cls)ss=ss.filter(s=>s.class===cls);
   const pr=ss.filter(s=>da[s.rollNumber]),ab=ss.filter(s=>!da[s.rollNumber]);
   document.getElementById('aStats').innerHTML=`<div class="sbox"><div class="sic si-b">👥</div><div class="snum">${ss.length}</div><div class="slbl">Total</div></div><div class="sbox"><div class="sic si-g">✓</div><div class="snum">${pr.length}</div><div class="slbl">Present</div></div><div class="sbox"><div class="sic si-r">✗</div><div class="snum">${ab.length}</div><div class="slbl">Absent</div></div><div class="sbox"><div class="sic si-gold">📊</div><div class="snum">${ss.length?Math.round(pr.length/ss.length*100):0}%</div><div class="slbl">Rate</div></div>`;
   let h='<div class="sdiv">Present ('+pr.length+')</div><div class="agrid">';
@@ -758,29 +976,29 @@ function renderAttR(){
   h+='</div>';document.getElementById('aReport').innerHTML=h;
 }
 
+// ===== BILLING =====
 let cb={student:null,items:[]};
 
-function loadBStu(){
+window.loadBStu = function(){
   const cls=document.getElementById('bCls').value,sel=document.getElementById('bStu');
   sel.innerHTML='<option value="">Choose student</option>';if(!cls)return;
-  db.students.filter(s=>s.class===cls&&s.session===db.cur).forEach(s=>{const o=document.createElement('option');o.value=s.id;o.textContent=s.name+' ('+s.rollNumber+')';sel.appendChild(o);});
-}
+  dbCache.students.filter(s=>s.class===cls&&s.session===dbCache.cur).forEach(s=>{const o=document.createElement('option');o.value=s.id;o.textContent=s.name+' ('+s.rollNumber+')';sel.appendChild(o);});
+};
 
-function loadSBill(){
-  const id=parseInt(document.getElementById('bStu').value);
+window.loadSBill = function(){
+  const id=document.getElementById('bStu').value;
   if(!id){document.getElementById('bPrevW').style.display='none';return;}
-  const s=db.students.find(s=>s.id===id);if(!s)return;
+  const s=dbCache.students.find(s=>s.id===id);if(!s)return;
   cb.student=s;cb.items=[{name:'Monthly Fee',price:s.monthlyFee}];
   updBP();
-}
+};
 
 function updBP(){
   if(!cb.student)return;
   const s=cb.student,tot=cb.items.reduce((a,b)=>a+b.price,0);
   const mo=parseInt(document.getElementById('bMo').value),yr=document.getElementById('bYr').value;
   
-  // Check if already paid
-  const existing=db.bills.find(b=>b.studentId===s.id&&b.month===mo&&b.year==yr);
+  const existing=dbCache.bills.find(b=>b.studentId===s.id&&b.month===mo&&b.year==yr);
   const paidBadge=existing?'<span class="bdg bdg-paid">PAID ✓</span>':'';
   
   document.getElementById('bPrevW').style.display='block';
@@ -793,131 +1011,160 @@ function updBP(){
   </div>`;
 }
 
-function saveBill(){
-  if(!cb.student){toast('Select a student first','err');return;}
+window.saveBill = async function(){
+  if(!cb.student){toast('Select student first','err');return;}
+  showLoader();
   const s=cb.student,mo=parseInt(document.getElementById('bMo').value),yr=parseInt(document.getElementById('bYr').value),tot=cb.items.reduce((a,b)=>a+b.price,0);
-  db.bills=db.bills.filter(b=>!(b.studentId===s.id&&b.month===mo&&b.year===yr));
-  db.bills.push({id:Date.now(),studentId:s.id,studentName:s.name,studentClass:s.class,rollNumber:s.rollNumber,parentName:s.parentName,phone:s.phoneNumber,month:mo,year:yr,total:tot,items:[...cb.items],createdAt:Date.now(),session:s.session,paid:true});
-  sv();renderDash();renderHist();updBP();toast('Bill saved as PAID for '+s.name,'suc');
-}
+  
+  try {
+    dbCache.bills=dbCache.bills.filter(b=>!(b.studentId===s.id&&b.month===mo&&b.year===yr));
+    
+    const bill = {
+      studentId:s.id,
+      studentName:s.name,
+      studentClass:s.class,
+      rollNumber:s.rollNumber,
+      parentName:s.parentName,
+      phone:s.phoneNumber,
+      month:mo,
+      year:yr,
+      total:tot,
+      items:[...cb.items],
+      createdAt:new Date().toISOString(),
+      session:s.session,
+      paid:true
+    };
+    
+    const saved = await saveBillToDb(bill);
+    dbCache.bills.push(saved);
+    
+    renderDash();renderHist();updBP();
+    toast('Bill saved for '+s.name,'suc');
+  } catch (error) {
+    toast('Error saving bill','err');
+  }
+  hideLoader();
+};
 
-function printBill(){
+window.printBill = function(){
   if(!cb.student){toast('Generate bill first','err');return;}
   const b=document.getElementById('pbill');if(!b){toast('Error','err');return;}
   const pr=document.getElementById('pr');pr.innerHTML=b.outerHTML;pr.style.display='block';window.print();pr.style.display='none';pr.innerHTML='';
-}
+};
 
-function sendBillSMS(){
+window.sendBillSMS = function(){
   if(!cb.student){toast('Generate bill first','err');return;}
   const s=cb.student,mo=parseInt(document.getElementById('bMo').value),yr=parseInt(document.getElementById('bYr').value),tot=cb.items.reduce((a,b)=>a+b.price,0);
   const msg=`Dear ${s.parentName}, fee bill for ${s.name} (${s.rollNumber}) for ${MO[mo]} ${yr} is ₹${tot}. - Central Public School`;
-  alert('SMS Message (to '+s.phoneNumber+'):\n\n'+msg+'\n\nNote: Integrate with SMS gateway API in production.');
-  toast('SMS prepared for '+s.phoneNumber,'suc');
-}
+  alert('SMS Message (to '+s.phoneNumber+'):\n\n'+msg+'\n\nNote: Integrate with SMS gateway API.');
+  toast('SMS prepared','suc');
+};
 
-function renderOv(){
+window.renderOv = function(){
   const mo=parseInt(document.getElementById('ovMo').value),yr=parseInt(document.getElementById('ovYr').value),cls=document.getElementById('ovCls').value;
-  let ss=db.students.filter(s=>s.session===db.cur);if(cls)ss=ss.filter(s=>s.class===cls);
-  const bills=db.bills.filter(b=>b.month===mo&&b.year===yr),bids=bills.map(b=>b.studentId);
+  let ss=dbCache.students.filter(s=>s.session===dbCache.cur);if(cls)ss=ss.filter(s=>s.class===cls);
+  const bills=dbCache.bills.filter(b=>b.month===mo&&b.year===yr),bids=bills.map(b=>b.studentId);
   const paid=ss.filter(s=>bids.includes(s.id)),upd=ss.filter(s=>!bids.includes(s.id));
   let h='<div class="sdiv">Paid ('+paid.length+')</div><div class="sgrid">';
   paid.forEach(s=>{h+=`<div style="background:#fff;border-radius:9px;border:1px solid var(--border);padding:12px;display:flex;gap:12px;align-items:center"><div style="flex:1"><div style="font-weight:700;font-size:.88rem;color:var(--navy)">${s.name} <span class="bdg bdg-c">Class ${s.class}</span></div><div style="font-size:.75rem;color:var(--text-light);margin-top:2px">Roll: ${s.rollNumber}</div></div><div style="color:var(--success);font-weight:700">PAID</div></div>`;});
   h+='</div><div class="sdiv">Unpaid ('+upd.length+')</div><div class="sgrid">';
-  upd.forEach(s=>{h+=`<div style="background:#fff;border-radius:9px;border:1px solid var(--border);padding:12px;display:flex;gap:12px;align-items:center"><div style="flex:1"><div style="font-weight:700;font-size:.88rem;color:var(--navy)">${s.name} <span class="bdg bdg-c">Class ${s.class}</span></div><div style="font-size:.75rem;color:var(--text-light);margin-top:2px">Roll: ${s.rollNumber} · 📱 ${s.phoneNumber}</div></div><div style="display:flex;gap:4px"><button class="btn btn-g btn-xs" onclick="qkBill(${s.id})">Bill</button><button class="btn btn-i btn-xs" onclick="sendDueSMS(${s.id},${mo},${yr})">📱</button></div></div>`;});
+  upd.forEach(s=>{h+=`<div style="background:#fff;border-radius:9px;border:1px solid var(--border);padding:12px;display:flex;gap:12px;align-items:center"><div style="flex:1"><div style="font-weight:700;font-size:.88rem;color:var(--navy)">${s.name} <span class="bdg bdg-c">Class ${s.class}</span></div><div style="font-size:.75rem;color:var(--text-light);margin-top:2px">Roll: ${s.rollNumber} · 📱 ${s.phoneNumber}</div></div><div style="display:flex;gap:4px"><button class="btn btn-g btn-xs" onclick="qkBill('${s.id}')">Bill</button><button class="btn btn-i btn-xs" onclick="sendDueSMS('${s.id}',${mo},${yr})">📱</button></div></div>`;});
   h+='</div>';document.getElementById('ovList').innerHTML=h;
-}
+};
 
-function sendDueSMS(sid,mo,yr){
-  const s=db.students.find(s=>s.id===sid);
+window.sendDueSMS = function(sid,mo,yr){
+  const s=dbCache.students.find(s=>s.id===sid);
   if(!s)return;
-  const msg=`Dear ${s.parentName}, reminder: fee for ${s.name} (${s.rollNumber}) for ${MO[mo]} ${yr} is pending. Amount: ₹${s.monthlyFee}. Please pay at earliest. - Central Public School`;
-  alert('SMS Message (to '+s.phoneNumber+'):\n\n'+msg+'\n\nNote: Integrate with SMS gateway API in production.');
-  toast('Payment reminder sent to '+s.phoneNumber,'suc');
-}
+  const msg=`Dear ${s.parentName}, reminder: fee for ${s.name} (${s.rollNumber}) for ${MO[mo]} ${yr} is pending. Amount: ₹${s.monthlyFee}. - Central Public School`;
+  alert('SMS Message (to '+s.phoneNumber+'):\n\n'+msg);
+  toast('Reminder sent','suc');
+};
 
 function renderHist(){
   const srch=(document.getElementById('hSrch')?.value||'').toLowerCase();
   const mo=parseInt(document.getElementById('hMo')?.value||'0');
   const cls=document.getElementById('hCls')?.value||'';
-  let bills=[...db.bills].sort((a,b)=>b.createdAt-a.createdAt);
+  let bills=[...dbCache.bills].sort((a,b)=>new Date(b.createdAt)-new Date(a.createdAt));
   if(mo)bills=bills.filter(b=>b.month===mo);
   if(cls)bills=bills.filter(b=>b.studentClass===cls);
   if(srch)bills=bills.filter(b=>b.studentName.toLowerCase().includes(srch)||b.rollNumber.toLowerCase().includes(srch));
   const c=document.getElementById('hList');
   if(!bills.length){c.innerHTML='<div class="empty"><div class="ei">📂</div><h4>No bills found</h4></div>';return;}
-  c.innerHTML=bills.map(b=>`<div class="sc"><div class="av" style="background:linear-gradient(135deg,var(--success),#20c997)">₹</div><div class="sm"><h3>${b.studentName} <span class="bdg bdg-c">Class ${b.studentClass}</span> ${b.paid?'<span class="bdg bdg-paid">PAID</span>':''}</h3><div class="sub"><span>📝 ${b.rollNumber}</span><span>📅 ${MO[b.month]} ${b.year}</span><span>👪 ${b.parentName}</span></div></div><div style="text-align:right;flex-shrink:0"><div style="font-family:'Playfair Display',serif;font-size:1.2rem;font-weight:800;color:var(--navy)">₹${b.total.toLocaleString('en-IN')}</div><div style="font-size:.72rem;color:var(--text-light)">${new Date(b.createdAt).toLocaleDateString('en-IN')}</div><button class="btn btn-i btn-xs" onclick="sendBillSMSById(${b.id})" style="margin-top:4px">📱 SMS</button></div></div>`).join('');
+  c.innerHTML=bills.map(b=>`<div class="sc"><div class="av" style="background:linear-gradient(135deg,var(--success),#20c997)">₹</div><div class="sm"><h3>${b.studentName} <span class="bdg bdg-c">Class ${b.studentClass}</span> ${b.paid?'<span class="bdg bdg-paid">PAID</span>':''}</h3><div class="sub"><span>📝 ${b.rollNumber}</span><span>📅 ${MO[b.month]} ${b.year}</span><span>👪 ${b.parentName}</span></div></div><div style="text-align:right;flex-shrink:0"><div style="font-family:'Playfair Display',serif;font-size:1.2rem;font-weight:800;color:var(--navy)">₹${b.total.toLocaleString('en-IN')}</div><div style="font-size:.72rem;color:var(--text-light)">${new Date(b.createdAt).toLocaleDateString('en-IN')}</div><button class="btn btn-i btn-xs" onclick="sendBillSMSById('${b.id}')" style="margin-top:4px">📱 SMS</button></div></div>`).join('');
 }
 
-function sendBillSMSById(bid){
-  const b=db.bills.find(x=>x.id===bid);
+window.sendBillSMSById = function(bid){
+  const b=dbCache.bills.find(x=>x.id===bid);
   if(!b)return;
-  const msg=`Dear ${b.parentName}, fee bill for ${b.studentName} (${b.rollNumber}) for ${MO[b.month]} ${b.year} is ₹${b.total}${b.paid?' - Already PAID.':' - Please pay soon.'}  - Central Public School`;
-  alert('SMS Message (to '+b.phone+'):\n\n'+msg+'\n\nNote: Integrate with SMS gateway API in production.');
-  toast('SMS sent to '+b.phone,'suc');
-}
+  const msg=`Dear ${b.parentName}, fee bill for ${b.studentName} (${b.rollNumber}) for ${MO[b.month]} ${b.year} is ₹${b.total}${b.paid?' - PAID':''} - Central Public School`;
+  alert('SMS Message:\n\n'+msg);
+  toast('SMS sent','suc');
+};
 
-// Notices
-function noticeTypeChange(){
+// ===== NOTICES =====
+window.noticeTypeChange = function(){
   const type=document.getElementById('noticeTo').value;
   document.getElementById('noticeClassSelect').style.display=type==='class'?'block':'none';
   document.getElementById('noticeStudentSelect').style.display=type==='select'?'block':'none';
   if(type==='select')loadStudentCheckList();
-}
+};
 
 function loadStudentCheckList(){
-  const list=db.students.filter(s=>s.session===db.cur);
+  const list=dbCache.students.filter(s=>s.session===dbCache.cur);
   document.getElementById('studentCheckList').innerHTML=list.map(s=>`<div style="padding:5px;border-bottom:1px solid var(--border)"><label style="display:flex;align-items:center;cursor:pointer"><input type="checkbox" class="stu-check" value="${s.id}"><span style="font-size:.85rem">${s.name} (${s.rollNumber}) - Class ${s.class}</span></label></div>`).join('');
 }
 
-function sendNotice(){
+window.sendNotice = async function(){
   const title=document.getElementById('noticeTitle').value.trim();
   const msg=document.getElementById('noticeMsg').value.trim();
   const type=document.getElementById('noticeTo').value;
   
-  if(!title||!msg){toast('Please fill title and message','err');return;}
+  if(!title||!msg){toast('Fill title and message','err');return;}
   
   let recipients=[];
   if(type==='all'){
-    recipients=db.students.filter(s=>s.session===db.cur);
+    recipients=dbCache.students.filter(s=>s.session===dbCache.cur);
   }else if(type==='class'){
     const cls=document.getElementById('noticeClass').value;
     if(!cls){toast('Select a class','err');return;}
-    recipients=db.students.filter(s=>s.session===db.cur&&s.class===cls);
+    recipients=dbCache.students.filter(s=>s.session===dbCache.cur&&s.class===cls);
   }else if(type==='select'){
     const checked=document.querySelectorAll('.stu-check:checked');
-    if(checked.length===0){toast('Select at least one student','err');return;}
-    const ids=Array.from(checked).map(c=>parseInt(c.value));
-    recipients=db.students.filter(s=>ids.includes(s.id));
+    if(checked.length===0){toast('Select students','err');return;}
+    const ids=Array.from(checked).map(c=>c.value);
+    recipients=dbCache.students.filter(s=>ids.includes(s.id));
   }
   
-  if(recipients.length===0){toast('No recipients found','err');return;}
+  if(recipients.length===0){toast('No recipients','err');return;}
   
-  const notice={
-    id:Date.now(),
-    title,
-    message:msg,
-    type,
-    recipientCount:recipients.length,
-    createdAt:new Date().toISOString(),
-    recipients:recipients.map(r=>({id:r.id,name:r.name,phone:r.phoneNumber}))
-  };
-  
-  db.notices.push(notice);
-  sv();
-  
-  const smsMsg=`${title}\n\n${msg}\n\n- Central Public School`;
-  alert(`Notice sent to ${recipients.length} parents!\n\nSample SMS:\n${smsMsg}\n\nNote: Integrate with SMS gateway API in production.`);
-  
-  toast(`Notice sent to ${recipients.length} parents!`,'suc');
-  document.getElementById('noticeTitle').value='';
-  document.getElementById('noticeMsg').value='';
-  document.getElementById('noticeTo').value='all';
-  noticeTypeChange();
-  renderNotices();
-}
+  showLoader();
+  try {
+    const notice={
+      title,
+      message:msg,
+      type,
+      recipientCount:recipients.length,
+      createdAt:new Date().toISOString(),
+      recipients:recipients.map(r=>({id:r.id,name:r.name,phone:r.phoneNumber}))
+    };
+    
+    const saved = await saveNoticeToDb(notice);
+    dbCache.notices.push(saved);
+    
+    toast(`Notice sent to ${recipients.length} parents!`,'suc');
+    document.getElementById('noticeTitle').value='';
+    document.getElementById('noticeMsg').value='';
+    document.getElementById('noticeTo').value='all';
+    noticeTypeChange();
+    renderNotices();
+  } catch (error) {
+    toast('Error sending notice','err');
+  }
+  hideLoader();
+};
 
 function renderNotices(){
-  const list=[...db.notices].sort((a,b)=>new Date(b.createdAt)-new Date(a.createdAt));
+  const list=[...dbCache.notices].sort((a,b)=>new Date(b.createdAt)-new Date(a.createdAt));
   const c=document.getElementById('noticeHistory');
   if(!list.length){c.innerHTML='<div class="empty"><div class="ei">📢</div><h4>No notices yet</h4></div>';return;}
   c.innerHTML=list.map(n=>`<div class="notice-card">
@@ -927,10 +1174,11 @@ function renderNotices(){
   </div>`).join('');
 }
 
+// ===== REPORTS =====
 function renderRpt(){
   const date=document.getElementById('rDate')?.value,cls=document.getElementById('rCls')?.value||'';
   if(!date){document.getElementById('rCnt').innerHTML='<div class="empty"><div class="ei">📊</div><p>Select a date</p></div>';return;}
-  const da=db.attendance[date]||{};let ss=db.students.filter(s=>s.session===db.cur);if(cls)ss=ss.filter(s=>s.class===cls);
+  const da=dbCache.attendance[date]||{};let ss=dbCache.students.filter(s=>s.session===dbCache.cur);if(cls)ss=ss.filter(s=>s.class===cls);
   const pr=ss.filter(s=>da[s.rollNumber]),ab=ss.filter(s=>!da[s.rollNumber]);
   let h='<div class="sdiv">Present ('+pr.length+')</div><div class="agrid">';
   pr.forEach(s=>{h+=`<div class="ac pres"><div class="an">${s.name}</div><div class="as">Roll ${s.rollNumber} · Class ${s.class}</div><div class="at">🕐 ${da[s.rollNumber].time}</div></div>`;});
@@ -939,37 +1187,45 @@ function renderRpt(){
   h+='</div>';document.getElementById('rCnt').innerHTML=h;
 }
 
-function showNewSession(){
+// ===== SESSIONS =====
+window.showNewSession = function(){
   opM('newSessionM');
-}
+};
 
-function createNewSession(){
+window.createNewSession = async function(){
   const name=document.getElementById('newSessName').value.trim();
   if(!name){toast('Enter session name','err');return;}
-  if(db.sessions.includes(name)||name===db.cur){toast('Session already exists','err');return;}
+  if(dbCache.sessions.includes(name)||name===dbCache.cur){toast('Session exists','err');return;}
   
-  if(!confirm(`This will archive session ${db.cur} and create new session ${name}. Continue?`))return;
+  if(!confirm(`Archive ${dbCache.cur} and create ${name}?`))return;
   
-  db.sessions.push(db.cur);
-  db.cur=name;
-  sv();
-  
-  document.getElementById('newSessName').value='';
-  clsM('newSessionM');
-  document.getElementById('sessTag').textContent='Session '+db.cur;
-  toast('New session created: '+name,'suc');
-  renderSess();renderDash();
-}
+  showLoader();
+  try {
+    dbCache.sessions.push(dbCache.cur);
+    dbCache.cur=name;
+    await saveSettings();
+    
+    document.getElementById('newSessName').value='';
+    clsM('newSessionM');
+    document.getElementById('sessTag').textContent='Session '+dbCache.cur;
+    toast('Session created: '+name,'suc');
+    renderSess();renderDash();
+  } catch (error) {
+    toast('Error creating session','err');
+  }
+  hideLoader();
+};
 
 function renderSess(){
-  const all=[...new Set([db.cur,...db.sessions,...db.students.map(s=>s.session).filter(Boolean)])].sort().reverse();
-  let h='<div style="background:linear-gradient(135deg,var(--navy),var(--royal));border-radius:12px;padding:18px 22px;color:#fff;margin-bottom:20px"><h3 style="font-family:\'Playfair Display\',serif;font-size:1rem;font-weight:800">Active: Session '+db.cur+'</h3><p style="font-size:.8rem;color:rgba(255,255,255,.7);margin-top:2px">All new registrations go to this session</p></div><div class="sgrid">';
+  const all=[...new Set([dbCache.cur,...dbCache.sessions,...dbCache.students.map(s=>s.session).filter(Boolean)])].sort().reverse();
+  let h='<div style="background:linear-gradient(135deg,var(--navy),var(--royal));border-radius:12px;padding:18px 22px;color:#fff;margin-bottom:20px"><h3 style="font-family:\'Playfair Display\',serif;font-size:1rem;font-weight:800">Active: Session '+dbCache.cur+'</h3><p style="font-size:.8rem;color:rgba(255,255,255,.7);margin-top:2px">All new registrations go here</p></div><div class="sgrid">';
   all.forEach(sess=>{
-    const ss=db.students.filter(s=>s.session===sess),bs=db.bills.filter(b=>b.session===sess),col=bs.reduce((a,b)=>a+b.total,0);
-    h+=`<div class="card"><div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px"><div><div style="font-family:'Playfair Display',serif;font-size:1.15rem;font-weight:800;color:var(--navy)">Session ${sess}</div>${sess===db.cur?'<span class="bdg" style="background:rgba(45,155,90,.12);color:var(--success);margin-top:3px">● Active</span>':'<span class="bdg" style="background:var(--cream);color:var(--text-mid);border:1px solid var(--border);margin-top:3px">Archived</span>'}</div><div style="text-align:right"><div style="font-size:.72rem;color:var(--text-light)">Collected</div><div style="font-family:'Playfair Display',serif;font-size:1.05rem;font-weight:800;color:var(--navy)">₹${col.toLocaleString('en-IN')}</div></div></div><div style="display:flex;gap:20px">${[[ss.length,'Students'],[bs.length,'Bills'],[...new Set(ss.map(s=>s.class))].length,'Classes'].map(([v,l])=>`<div><div style="font-size:1.4rem;font-weight:800;color:var(--navy)">${v}</div><div style="font-size:.72rem;color:var(--text-light)">${l}</div></div>`).join('')}</div></div>`;
+    const ss=dbCache.students.filter(s=>s.session===sess),bs=dbCache.bills.filter(b=>b.session===sess),col=bs.reduce((a,b)=>a+b.total,0);
+    h+=`<div class="card"><div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px"><div><div style="font-family:'Playfair Display',serif;font-size:1.15rem;font-weight:800;color:var(--navy)">Session ${sess}</div>${sess===dbCache.cur?'<span class="bdg" style="background:rgba(45,155,90,.12);color:var(--success);margin-top:3px">● Active</span>':'<span class="bdg" style="background:var(--cream);color:var(--text-mid);border:1px solid var(--border);margin-top:3px">Archived</span>'}</div><div style="text-align:right"><div style="font-size:.72rem;color:var(--text-light)">Collected</div><div style="font-family:'Playfair Display',serif;font-size:1.05rem;font-weight:800;color:var(--navy)">₹${col.toLocaleString('en-IN')}</div></div></div><div style="display:flex;gap:20px">${[[ss.length,'Students'],[bs.length,'Bills'],[...new Set(ss.map(s=>s.class))].length,'Classes'].map(([v,l])=>`<div><div style="font-size:1.4rem;font-weight:800;color:var(--navy)">${v}</div><div style="font-size:.72rem;color:var(--text-light)">${l}</div></div>`).join('')}</div></div>`;
   });
   h+='</div>';document.getElementById('sessList').innerHTML=h;
 }
+
+// Start loader
+showLoader();
 </script>
-</body>
-</html>
