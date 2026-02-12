@@ -1,116 +1,300 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <title>School ERP</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-
-  <link rel="stylesheet" href="style.css">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Central Public School — Firebase Management System</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;800;900&family=DM+Sans:wght@300;400;500;600;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root{--navy:#0f1b2d;--deep:#1a2d4a;--royal:#1e3f6e;--gold:#c9a84c;--gold-light:#e8c96a;--cream:#faf8f3;--white:#fff;--success:#2d9b5a;--danger:#c0392b;--warning:#e67e22;--info:#2471a3;--text-dark:#0f1b2d;--text-mid:#3d5a80;--text-light:#6b8cae;--border:#dde4ed;--shadow:0 4px 24px rgba(15,27,45,.10);--shadow-lg:0 12px 48px rgba(15,27,45,.18)}
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'DM Sans',sans-serif;background:var(--cream);color:var(--text-dark);min-height:100vh}
+.login-wrap{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px}
+.login-box{background:#fff;border-radius:16px;padding:40px;max-width:420px;width:100%;box-shadow:var(--shadow-lg)}
+.login-box h1{font-family:'Playfair Display',serif;font-size:1.8rem;font-weight:800;color:var(--navy);text-align:center;margin-bottom:8px}
+.login-box p{text-align:center;color:var(--text-light);font-size:.9rem;margin-bottom:30px}
+.hdr{background:var(--navy);color:#fff;padding:0 28px;display:flex;align-items:center;justify-content:space-between;height:68px;box-shadow:0 2px 16px rgba(15,27,45,.3);position:sticky;top:0;z-index:200}
+.logo{display:flex;align-items:center;gap:12px}
+.logo-icon{width:44px;height:44px;background:var(--gold);border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:20px}
+.logo h1{font-family:'Playfair Display',serif;font-size:1.15rem;font-weight:800;line-height:1.1}
+.logo span{font-size:.68rem;color:var(--gold-light);font-weight:400;letter-spacing:1.5px;text-transform:uppercase;display:block}
+.sess-tag{background:rgba(201,168,76,.18);border:1px solid var(--gold);color:var(--gold-light);padding:5px 12px;border-radius:20px;font-size:.75rem;font-weight:500;letter-spacing:.5px}
+.app{display:grid;grid-template-columns:210px 1fr;min-height:calc(100vh - 68px)}
+.sidebar{background:var(--navy);padding:20px 0;border-right:1px solid rgba(255,255,255,.06)}
+.nav-lbl{font-size:.62rem;font-weight:600;letter-spacing:2px;text-transform:uppercase;color:var(--text-light);padding:0 18px;margin:14px 0 6px}
+.ni{display:flex;align-items:center;gap:10px;padding:11px 18px;cursor:pointer;color:#7a9abf;font-size:.87rem;font-weight:500;border-left:3px solid transparent;transition:all .18s;user-select:none}
+.ni:hover{background:rgba(255,255,255,.05);color:#fff}
+.ni.active{color:var(--gold-light);background:rgba(201,168,76,.1);border-left-color:var(--gold)}
+.ni-ic{font-size:1rem;width:20px;text-align:center}
+.mc{padding:28px;overflow-y:auto;max-height:calc(100vh - 68px)}
+.page{display:none}.page.active{display:block}
+.ph{margin-bottom:24px}
+.ph h2{font-family:'Playfair Display',serif;font-size:1.75rem;font-weight:800;color:var(--navy)}
+.ph p{color:var(--text-light);font-size:.87rem;margin-top:3px}
+.card{background:#fff;border-radius:12px;padding:22px;box-shadow:var(--shadow);border:1px solid var(--border);margin-bottom:18px}
+.ct{font-size:.95rem;font-weight:600;color:var(--navy);margin-bottom:16px;display:flex;align-items:center;gap:7px}
+.fr{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.fg{margin-bottom:16px}
+.fg label{display:block;margin-bottom:5px;font-size:.75rem;font-weight:600;color:var(--text-mid);text-transform:uppercase;letter-spacing:.5px}
+.fg input,.fg select,.fg textarea{width:100%;padding:10px 12px;border:1.5px solid var(--border);border-radius:8px;font-size:.9rem;font-family:'DM Sans',sans-serif;color:var(--text-dark);background:#fff;transition:all .2s;outline:none}
+.fg input:focus,.fg select:focus,.fg textarea:focus{border-color:var(--royal);box-shadow:0 0 0 3px rgba(30,63,110,.08)}
+.btn{display:inline-flex;align-items:center;gap:6px;padding:9px 18px;border:none;border-radius:8px;cursor:pointer;font-size:.85rem;font-weight:600;font-family:'DM Sans',sans-serif;transition:all .18s}
+.btn-p{background:var(--royal);color:#fff}.btn-p:hover{background:var(--deep);transform:translateY(-1px);box-shadow:0 4px 12px rgba(30,63,110,.3)}
+.btn-g{background:var(--gold);color:var(--navy)}.btn-g:hover{background:var(--gold-light);transform:translateY(-1px)}
+.btn-s{background:var(--success);color:#fff}.btn-s:hover{background:#23844a;transform:translateY(-1px)}
+.btn-d{background:var(--danger);color:#fff}.btn-d:hover{background:#a93226;transform:translateY(-1px)}
+.btn-i{background:var(--info);color:#fff}.btn-i:hover{background:#1a5f88;transform:translateY(-1px)}
+.btn-o{background:transparent;border:1.5px solid var(--border);color:var(--text-mid)}.btn-o:hover{border-color:var(--royal);color:var(--royal)}
+.btn-sm{padding:6px 12px;font-size:.78rem;border-radius:7px}
+.btn-xs{padding:4px 10px;font-size:.73rem;border-radius:6px}
+.loader{position:fixed;inset:0;background:rgba(255,255,255,.95);display:none;align-items:center;justify-content:center;z-index:9999;flex-direction:column;gap:16px}
+.loader.show{display:flex}
+.spinner{width:50px;height:50px;border:4px solid var(--border);border-top-color:var(--royal);border-radius:50%;animation:spin 1s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.srow{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:24px}
+.sbox{background:#fff;border-radius:12px;padding:18px 20px;border:1px solid var(--border);box-shadow:var(--shadow)}
+.snum{font-family:'Playfair Display',serif;font-size:2rem;font-weight:800;color:var(--navy);line-height:1}
+.slbl{font-size:.75rem;color:var(--text-light);margin-top:3px;font-weight:500}
+.sic{width:38px;height:38px;border-radius:9px;display:flex;align-items:center;justify-content:center;font-size:1.1rem;margin-bottom:10px}
+.si-b{background:rgba(30,63,110,.1)}.si-g{background:rgba(45,155,90,.1)}.si-r{background:rgba(192,57,43,.1)}.si-gold{background:rgba(201,168,76,.15)}
+.twrap{position:fixed;bottom:24px;right:24px;z-index:3000;display:flex;flex-direction:column;gap:8px}
+.toast{background:var(--navy);color:#fff;padding:11px 18px;border-radius:9px;font-size:.85rem;font-weight:500;box-shadow:var(--shadow-lg);animation:tIn .25s ease;display:flex;align-items:center;gap:9px;min-width:240px}
+@keyframes tIn{from{opacity:0;transform:translateX(28px)}to{opacity:1;transform:translateX(0)}}
+.toast.suc{border-left:4px solid var(--success)}.toast.err{border-left:4px solid var(--danger)}.toast.inf{border-left:4px solid var(--info)}
+.sgrid{display:grid;gap:12px}
+.sc{background:#fff;border-radius:11px;border:1px solid var(--border);padding:16px 18px;display:flex;align-items:center;gap:16px;box-shadow:var(--shadow);transition:all .18s}
+.sc:hover{box-shadow:var(--shadow-lg);transform:translateY(-1px)}
+.av{width:46px;height:46px;border-radius:11px;background:linear-gradient(135deg,var(--royal),var(--deep));display:flex;align-items:center;justify-content:center;color:#fff;font-size:1.1rem;font-weight:700;font-family:'Playfair Display',serif;flex-shrink:0}
+.sm{flex:1;min-width:0}
+.sm h3{font-size:.93rem;font-weight:700;color:var(--navy)}
+.sm .sub{font-size:.77rem;color:var(--text-light);margin-top:3px;display:flex;gap:12px;flex-wrap:wrap}
+.bdg{display:inline-flex;align-items:center;padding:2px 8px;border-radius:20px;font-size:.7rem;font-weight:600}
+.bdg-c{background:rgba(30,63,110,.1);color:var(--royal)}
+.bdg-s{background:rgba(201,168,76,.15);color:#9a6f00}
+.bdg-paid{background:rgba(45,155,90,.1);color:var(--success)}
+.sa{display:flex;gap:6px;flex-wrap:wrap;flex-shrink:0}
+.fbar{display:flex;gap:10px;margin-bottom:16px;flex-wrap:wrap;align-items:flex-end}
+.fbar .fg{margin-bottom:0;min-width:140px;flex:1}
+.sb{position:relative;flex:2}
+.sb input{padding-left:38px!important}
+.si{position:absolute;left:12px;top:50%;transform:translateY(-50%);color:var(--text-light);pointer-events:none}
+.empty{text-align:center;padding:50px 20px;color:var(--text-light)}
+.empty .ei{font-size:2.8rem;margin-bottom:10px}
+@media(max-width:860px){.app{grid-template-columns:1fr}.sidebar{display:flex;flex-wrap:wrap;padding:10px;gap:3px}.nav-lbl{display:none}.ni{border-left:none;border-radius:7px;padding:7px 10px;font-size:.78rem}.srow{grid-template-columns:repeat(2,1fr)}.fr{grid-template-columns:1fr}}
+</style>
 </head>
 <body>
 
-<!-- LOGIN -->
-<div id="loginPage" class="center-box">
-  <div class="card">
-    <h2>School ERP Login</h2>
-    <input type="email" id="email" placeholder="Email">
-    <input type="password" id="password" placeholder="Password">
-    <button onclick="loginUser()">Login</button>
+<div id="loader" class="loader">
+  <div class="spinner"></div>
+  <p style="color:var(--text-mid);font-size:.9rem;font-weight:500">Loading...</p>
+</div>
+
+<div id="loginPage" class="login-wrap">
+  <div class="login-box">
+    <div class="logo-icon" style="margin:0 auto 16px;width:60px;height:60px;font-size:28px">🎓</div>
+    <h1>Central Public School</h1>
+    <p>Management System Login</p>
+    <form id="loginForm" onsubmit="doLogin(event)">
+      <div class="fg">
+        <label>Email</label>
+        <input type="email" id="loginUser" required placeholder="Enter email">
+      </div>
+      <div class="fg">
+        <label>Password</label>
+        <input type="password" id="loginPass" required placeholder="Enter password (min 6 chars)">
+      </div>
+      <button type="submit" class="btn btn-p" style="width:100%;justify-content:center">Login / Create Account</button>
+    </form>
+    <p style="margin-top:20px;font-size:.78rem;color:var(--text-mid);text-align:center">
+      New user? Just enter email & password to create your account automatically
+    </p>
   </div>
 </div>
 
-<!-- MAIN APP -->
-<div id="app" style="display:none;">
-
-  <header>
-    <h1>School ERP</h1>
+<div id="mainApp" style="display:none">
+<header class="hdr">
+  <div class="logo">
+    <div class="logo-icon">🎓</div>
     <div>
-      <span id="userRole"></span>
-      <button onclick="logoutUser()">Logout</button>
+      <h1>Central Public School</h1>
+      <span>Firebase Management</span>
     </div>
-  </header>
+  </div>
+  <div style="display:flex;align-items:center;gap:8px">
+    <span class="sess-tag" id="sessTag">Session 2026–27</span>
+    <span style="font-size:.7rem;color:var(--gold-light)" id="userEmail"></span>
+    <button class="btn btn-d btn-sm" onclick="logout()">Logout</button>
+  </div>
+</header>
 
-  <nav>
-    <button onclick="showPage('dashboard')">Dashboard</button>
-    <button onclick="showPage('students')">Students</button>
-    <button onclick="showPage('attendance')">Attendance</button>
-    <button onclick="showPage('billing')">Billing</button>
-    <button onclick="showPage('notices')">Notices</button>
-    <button onclick="showPage('sessions')">Sessions</button>
+<div class="app">
+  <nav class="sidebar">
+    <div class="nav-lbl">Main</div>
+    <div class="ni active" onclick="goP('dashboard',this)"><span class="ni-ic">📊</span> Dashboard</div>
+    <div class="ni" onclick="goP('students',this)"><span class="ni-ic">👥</span> Students</div>
   </nav>
 
-  <main>
+  <main class="mc">
+    <div id="page-dashboard" class="page active">
+      <div class="ph"><h2>Dashboard</h2><p>School overview - Cloud synced ☁️</p></div>
+      <div class="srow" id="dStats"></div>
+    </div>
 
-    <!-- DASHBOARD -->
-    <section id="dashboard" class="page">
-      <h2>Dashboard</h2>
-      <div id="stats"></div>
-    </section>
-
-    <!-- STUDENTS -->
-    <section id="students" class="page hidden">
-      <h2>Students</h2>
-
-      <div class="form-row">
-        <input type="text" id="studentName" placeholder="Student Name">
-        <input type="text" id="parentName" placeholder="Parent Name">
-        <input type="text" id="phone" placeholder="Phone">
-        <select id="classSelect">
-          <option value="">Class</option>
-          <option>1</option><option>2</option><option>3</option>
-          <option>4</option><option>5</option><option>6</option>
-          <option>7</option><option>8</option><option>9</option>
-          <option>10</option><option>11</option><option>12</option>
-        </select>
-        <button onclick="addStudent()">Add</button>
+    <div id="page-students" class="page">
+      <div class="ph" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px">
+        <div><h2>Students</h2><p><span id="scnt">0</span> total</p></div>
       </div>
-
-      <div id="studentList"></div>
-    </section>
-
-    <!-- ATTENDANCE -->
-    <section id="attendance" class="page hidden">
-      <h2>Attendance</h2>
-      <input type="text" id="attendanceRoll" placeholder="Scan / Enter Roll">
-      <button onclick="markAttendance()">Mark Present</button>
-      <div id="attendanceLog"></div>
-    </section>
-
-    <!-- BILLING -->
-    <section id="billing" class="page hidden">
-      <h2>Billing</h2>
-      <select id="billClassFilter">
-        <option value="">Filter by Class</option>
-        <option>1</option><option>2</option><option>3</option>
-        <option>4</option><option>5</option><option>6</option>
-        <option>7</option><option>8</option><option>9</option>
-        <option>10</option><option>11</option><option>12</option>
-      </select>
-      <div id="billList"></div>
-    </section>
-
-    <!-- NOTICES -->
-    <section id="notices" class="page hidden">
-      <h2>Send Notice</h2>
-      <input type="text" id="noticeTitle" placeholder="Title">
-      <textarea id="noticeMessage" placeholder="Message"></textarea>
-      <button onclick="sendNotice()">Send To All</button>
-      <div id="noticeBoard"></div>
-    </section>
-
-    <!-- SESSIONS -->
-    <section id="sessions" class="page hidden">
-      <h2>Session Management</h2>
-      <input type="text" id="newSession" placeholder="2027-28">
-      <button onclick="createSession()">Create Session</button>
-      <div id="sessionList"></div>
-    </section>
+      <div class="fbar">
+        <div class="sb"><span class="si">🔍</span><input type="text" id="srch" placeholder="Search name..." oninput="renderStudents()"></div>
+      </div>
+      <div id="sGrid" class="sgrid"></div>
+    </div>
 
   </main>
 </div>
+</div>
 
-<script type="module" src="firebase-config.js"></script>
-<script type="module" src="app.js"></script>
+<div class="twrap" id="twrap"></div>
+
+<script type="module">
+import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js';
+import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js';
+import { getFirestore, collection, addDoc, getDocs, doc, setDoc, deleteDoc } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js';
+
+const firebaseConfig = {
+  apiKey: "AIzaSyDA67oWl6Kq1kNXLylumXlC7YV5tgrsnBs",
+  authDomain: "central-public-school-1cd53.firebaseapp.com",
+  projectId: "central-public-school-1cd53",
+  storageBucket: "central-public-school-1cd53.firebasestorage.app",
+  messagingSenderId: "490014133859",
+  appId: "1:490014133859:web:f89fe318d46e3e768c3256"
+};
+
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const db = getFirestore(app);
+
+window.auth = auth;
+window.db = db;
+
+let dbCache={students:[]};
+window.dbCache = dbCache;
+
+function showLoader(){document.getElementById('loader').classList.add('show');}
+function hideLoader(){document.getElementById('loader').classList.remove('show');}
+window.showLoader = showLoader;
+window.hideLoader = hideLoader;
+
+function toast(msg,type='inf',dur=3000){
+  const w=document.getElementById('twrap'),t=document.createElement('div');
+  t.className='toast '+type;
+  t.innerHTML=(type==='suc'?'✓':type==='err'?'✗':'ℹ')+' '+msg;
+  w.appendChild(t);setTimeout(()=>t.remove(),dur);
+}
+window.toast = toast;
+
+onAuthStateChanged(auth, async (user) => {
+  if (user) {
+    window.currentUser = user;
+    document.getElementById('userEmail').textContent = user.email;
+    await loadAllData();
+    showApp();
+  } else {
+    window.currentUser = null;
+    document.getElementById('mainApp').style.display='none';
+    document.getElementById('loginPage').style.display='flex';
+  }
+  hideLoader();
+});
+
+window.doLogin = async function(e) {
+  e.preventDefault();
+  showLoader();
+  const email = document.getElementById('loginUser').value.trim();
+  const password = document.getElementById('loginPass').value;
+  
+  try {
+    await signInWithEmailAndPassword(auth, email, password);
+    toast('Login successful!','suc');
+  } catch (error) {
+    if (error.code === 'auth/user-not-found' || error.code === 'auth/invalid-credential') {
+      try {
+        await createUserWithEmailAndPassword(auth, email, password);
+        toast('Account created successfully!','suc');
+      } catch (createError) {
+        toast('Error: ' + createError.message,'err');
+        hideLoader();
+      }
+    } else {
+      toast('Login failed: ' + error.message,'err');
+      hideLoader();
+    }
+  }
+};
+
+window.logout = async function() {
+  if(!confirm('Logout?')) return;
+  showLoader();
+  try {
+    await signOut(auth);
+    document.getElementById('loginForm').reset();
+    toast('Logged out','inf');
+  } catch (error) {
+    toast('Logout failed','err');
+  }
+  hideLoader();
+};
+
+async function loadAllData() {
+  showLoader();
+  try {
+    const uid = auth.currentUser.uid;
+    const studentsSnap = await getDocs(collection(db, 'users', uid, 'students'));
+    dbCache.students = studentsSnap.docs.map(doc => ({id: doc.id, ...doc.data()}));
+    renderDash();
+    renderStudents();
+  } catch (error) {
+    console.error('Error loading data:', error);
+    toast('Error loading data','err');
+  }
+  hideLoader();
+}
+
+function showApp(){
+  document.getElementById('loginPage').style.display='none';
+  document.getElementById('mainApp').style.display='block';
+}
+
+window.goP = function(n,el){
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.ni').forEach(x=>x.classList.remove('active'));
+  document.getElementById('page-'+n).classList.add('active');
+  if(el)el.classList.add('active');
+};
+
+function renderDash(){
+  const ss=dbCache.students;
+  document.getElementById('dStats').innerHTML=`<div class="sbox"><div class="sic si-b">👥</div><div class="snum">${ss.length}</div><div class="slbl">Total Students</div></div><div class="sbox"><div class="sic si-g">☁️</div><div class="snum">Firebase</div><div class="slbl">Cloud Synced</div></div><div class="sbox"><div class="sic si-gold">🔐</div><div class="snum">Secure</div><div class="slbl">Protected Data</div></div><div class="sbox"><div class="sic si-r">📱</div><div class="snum">Multi</div><div class="slbl">Device Access</div></div>`;
+}
+window.renderDash = renderDash;
+
+function renderStudents(){
+  const srch=(document.getElementById('srch')?.value||'').toLowerCase();
+  let list=dbCache.students.filter(s=>{if(srch&&!s.name.toLowerCase().includes(srch))return false;return true;});
+  document.getElementById('scnt').textContent=list.length;
+  const g=document.getElementById('sGrid');
+  if(!list.length){g.innerHTML='<div class="empty"><div class="ei">👤</div><h4>No students found</h4><p>This is a demo showing Firebase integration</p></div>';return;}
+  g.innerHTML=list.map(s=>{
+    const init=s.name.split(' ').map(w=>w[0]).join('').substring(0,2).toUpperCase();
+    return`<div class="sc"><div class="av">${init}</div><div class="sm"><h3>${s.name}</h3><div class="sub"><span>Class ${s.class||'-'}</span><span>Roll ${s.rollNumber||'-'}</span></div></div></div>`;
+  }).join('');
+}
+window.renderStudents = renderStudents;
+
+showLoader();
+</script>
 
 </body>
 </html>
