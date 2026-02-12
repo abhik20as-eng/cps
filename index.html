@@ -1,362 +1,114 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Central Public School — Management System</title>
-<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;800;900&family=DM+Sans:wght@300;400;500;600;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="styles.css">
+  <meta charset="UTF-8">
+  <title>School ERP</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <link rel="stylesheet" href="style.css">
 </head>
 <body>
 
-<div class="loading" id="loading">
-  <div class="spinner"></div>
-</div>
-
-<!-- LOGIN PAGE -->
-<div id="loginPage" class="login-wrap">
-  <div class="login-box">
-    <div class="logo-icon" style="margin:0 auto 16px;width:60px;height:60px;font-size:28px">🎓</div>
-    <h1>Central Public School</h1>
-    <p>Management System Login</p>
-    <form id="loginForm">
-      <div class="fg">
-        <label>Email</label>
-        <input type="email" id="loginUser" required placeholder="Enter email">
-      </div>
-      <div class="fg">
-        <label>Password</label>
-        <input type="password" id="loginPass" required placeholder="Enter password">
-      </div>
-      <button type="submit" class="btn btn-p" style="width:100%;justify-content:center">Login</button>
-    </form>
-    <div style="margin-top:16px;text-align:center">
-      <button class="btn btn-o btn-sm" id="showSignupBtn" style="width:100%;justify-content:center">Create New Account</button>
-    </div>
-  </div>
-</div>
-
-<!-- SIGNUP PAGE -->
-<div id="signupPage" class="login-wrap" style="display:none">
-  <div class="login-box">
-    <div class="logo-icon" style="margin:0 auto 16px;width:60px;height:60px;font-size:28px">🎓</div>
-    <h1>Create Account</h1>
-    <p>Setup your school account</p>
-    <form id="signupForm">
-      <div class="fg">
-        <label>School Name</label>
-        <input type="text" id="signupSchool" required placeholder="Central Public School">
-      </div>
-      <div class="fg">
-        <label>Email</label>
-        <input type="email" id="signupUser" required placeholder="admin@school.com">
-      </div>
-      <div class="fg">
-        <label>Password</label>
-        <input type="password" id="signupPass" required placeholder="Minimum 6 characters">
-      </div>
-      <button type="submit" class="btn btn-p" style="width:100%;justify-content:center">Create Account</button>
-    </form>
-    <div style="margin-top:16px;text-align:center">
-      <button class="btn btn-o btn-sm" id="showLoginBtn" style="width:100%;justify-content:center">Back to Login</button>
-    </div>
+<!-- LOGIN -->
+<div id="loginPage" class="center-box">
+  <div class="card">
+    <h2>School ERP Login</h2>
+    <input type="email" id="email" placeholder="Email">
+    <input type="password" id="password" placeholder="Password">
+    <button onclick="loginUser()">Login</button>
   </div>
 </div>
 
 <!-- MAIN APP -->
-<div id="mainApp" style="display:none">
-<header class="hdr">
-  <div class="logo">
-    <div class="logo-icon">🎓</div>
-    <div>
-      <h1 id="schoolName">Central Public School</h1>
-      <span>Management System</span>
-    </div>
-  </div>
-  <div style="display:flex;align-items:center;gap:8px">
-    <span class="sess-tag" id="sessTag">Session 2026–27</span>
-    <button class="btn btn-d btn-sm" id="logoutBtn">Logout</button>
-  </div>
-</header>
+<div id="app" style="display:none;">
 
-<div class="app">
-  <nav class="sidebar">
-    <div class="nav-lbl">Main</div>
-    <div class="ni active" data-page="dashboard"><span class="ni-ic">📊</span> Dashboard</div>
-    <div class="ni" data-page="register"><span class="ni-ic">✎</span> Register</div>
-    <div class="ni" data-page="students"><span class="ni-ic">👥</span> Students</div>
-    <div class="nav-lbl">Operations</div>
-    <div class="ni" data-page="attendance"><span class="ni-ic">📋</span> Attendance</div>
-    <div class="ni" data-page="billing"><span class="ni-ic">💳</span> Billing</div>
-    <div class="ni" data-page="notices"><span class="ni-ic">📢</span> Notices</div>
-    <div class="ni" data-page="reports"><span class="ni-ic">📈</span> Reports</div>
-    <div class="nav-lbl">Settings</div>
-    <div class="ni" data-page="sessions"><span class="ni-ic">📁</span> Sessions</div>
-    <div class="ni" data-page="settings"><span class="ni-ic">⚙</span> Settings</div>
+  <header>
+    <h1>School ERP</h1>
+    <div>
+      <span id="userRole"></span>
+      <button onclick="logoutUser()">Logout</button>
+    </div>
+  </header>
+
+  <nav>
+    <button onclick="showPage('dashboard')">Dashboard</button>
+    <button onclick="showPage('students')">Students</button>
+    <button onclick="showPage('attendance')">Attendance</button>
+    <button onclick="showPage('billing')">Billing</button>
+    <button onclick="showPage('notices')">Notices</button>
+    <button onclick="showPage('sessions')">Sessions</button>
   </nav>
 
-  <main class="mc">
-    <!-- DASHBOARD -->
-    <div id="page-dashboard" class="page active">
-      <div class="ph"><h2>Dashboard</h2><p>School overview</p></div>
-      <div class="srow" id="dStats"></div>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:18px">
-        <div class="card"><div class="ct">📅 Today's Attendance</div><div id="dAtt"></div></div>
-        <div class="card"><div class="ct">💰 Recent Bills</div><div id="dBills"></div></div>
-      </div>
-    </div>
+  <main>
 
-    <!-- REGISTER -->
-    <div id="page-register" class="page">
-      <div class="ph"><h2>Register Student</h2><p>Add to current session</p></div>
-      <div class="card">
-        <form id="sForm">
-          <div class="fr">
-            <div class="fg"><label>Student Name *</label><input id="rn" required placeholder="Full name"></div>
-            <div class="fg"><label>Class *</label><select id="rc" required><option value="">Select</option><option>1</option><option>2</option><option>3</option><option>4</option><option>5</option><option>6</option><option>7</option><option>8</option><option>9</option><option>10</option><option>11</option><option>12</option></select></div>
-          </div>
-          <div class="fr">
-            <div class="fg"><label>Date of Birth *</label><input type="date" id="rd" required></div>
-            <div class="fg">
-              <label>Roll Number *</label>
-              <input id="rr" required placeholder="Auto-generated" readonly style="background:#f8f9fa">
-              <small style="color:var(--text-light);font-size:.7rem;margin-top:3px;display:block">Auto-assigned for each class</small>
-            </div>
-          </div>
-          <div class="fr">
-            <div class="fg"><label>Parent Name *</label><input id="rp" required placeholder="Father/Mother"></div>
-            <div class="fg"><label>Phone *</label><input id="rpm" pattern="[0-9]{10}" required placeholder="10 digit mobile"></div>
-          </div>
-          <div class="fr">
-            <div class="fg"><label>Date of Joining *</label><input type="date" id="rj" required></div>
-            <div class="fg"><label>Monthly Fee (₹) *</label><input type="number" id="rf" required placeholder="e.g. 1500"></div>
-          </div>
-          <div class="fg"><label>Address</label><textarea id="ra" rows="2" placeholder="Optional"></textarea></div>
-          <div style="display:flex;gap:9px;margin-top:6px">
-            <button type="submit" class="btn btn-p">✓ Register</button>
-            <button type="button" class="btn btn-o" id="clearFormBtn">Clear</button>
-          </div>
-        </form>
-      </div>
-    </div>
+    <!-- DASHBOARD -->
+    <section id="dashboard" class="page">
+      <h2>Dashboard</h2>
+      <div id="stats"></div>
+    </section>
 
     <!-- STUDENTS -->
-    <div id="page-students" class="page">
-      <div class="ph" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px">
-        <div><h2>Students</h2><p><span id="scnt">0</span> total</p></div>
-        <div style="display:flex;gap:8px;flex-wrap:wrap">
-          <button class="btn btn-o btn-sm" id="downloadQRBtn">🖼 Download QR Codes</button>
-          <button class="btn btn-p btn-sm" id="addStudentBtn">+ Add</button>
-        </div>
+    <section id="students" class="page hidden">
+      <h2>Students</h2>
+
+      <div class="form-row">
+        <input type="text" id="studentName" placeholder="Student Name">
+        <input type="text" id="parentName" placeholder="Parent Name">
+        <input type="text" id="phone" placeholder="Phone">
+        <select id="classSelect">
+          <option value="">Class</option>
+          <option>1</option><option>2</option><option>3</option>
+          <option>4</option><option>5</option><option>6</option>
+          <option>7</option><option>8</option><option>9</option>
+          <option>10</option><option>11</option><option>12</option>
+        </select>
+        <button onclick="addStudent()">Add</button>
       </div>
-      <div class="fbar">
-        <div class="sb"><span class="si">🔍</span><input type="text" id="srch" placeholder="Search name, roll..."></div>
-        <div class="fg"><label>Class</label><select id="fCls"><option value="">All</option><option>1</option><option>2</option><option>3</option><option>4</option><option>5</option><option>6</option><option>7</option><option>8</option><option>9</option><option>10</option><option>11</option><option>12</option></select></div>
-        <div class="fg"><label>Session</label><select id="fSess"><option value="">All Sessions</option></select></div>
-      </div>
-      <div id="sGrid" class="sgrid"></div>
-    </div>
+
+      <div id="studentList"></div>
+    </section>
 
     <!-- ATTENDANCE -->
-    <div id="page-attendance" class="page">
-      <div class="ph"><h2>Mark Attendance</h2><p>Scan QR or enter roll number</p></div>
-      <div style="max-width:500px;margin:0 auto;text-align:center;padding:16px 0">
-        <div style="font-size:3.2rem">📷</div>
-        <p style="color:var(--text-light);font-size:.88rem;margin:8px 0">Scan QR code or type roll number below</p>
-        <div class="sin-w"><input type="text" id="scanIn" placeholder="Roll Number..." autocomplete="off"></div>
-        <button class="btn btn-p" style="width:100%;justify-content:center;padding:13px" id="markAttBtn">✓ Mark Present</button>
-        <div id="sFeed" class="sfeed" style="display:none"></div>
-      </div>
-      <div class="sdiv">Attendance Log</div>
-      <div class="crow">
-        <div class="fg"><label>Date</label><input type="date" id="aDate"></div>
-        <div class="fg"><label>Class</label><select id="aCls"><option value="">All</option><option>1</option><option>2</option><option>3</option><option>4</option><option>5</option><option>6</option><option>7</option><option>8</option><option>9</option><option>10</option><option>11</option><option>12</option></select></div>
-        <button class="btn btn-o btn-sm np" onclick="window.print()" style="align-self:flex-end">🖼 Print</button>
-      </div>
-      <div class="srow" id="aStats" style="grid-template-columns:repeat(4,1fr);margin-bottom:16px"></div>
-      <div id="aReport"></div>
-    </div>
+    <section id="attendance" class="page hidden">
+      <h2>Attendance</h2>
+      <input type="text" id="attendanceRoll" placeholder="Scan / Enter Roll">
+      <button onclick="markAttendance()">Mark Present</button>
+      <div id="attendanceLog"></div>
+    </section>
 
     <!-- BILLING -->
-    <div id="page-billing" class="page">
-      <div class="ph"><h2>Fee Management</h2><p>Generate, track and print bills</p></div>
-      <div class="tpills">
-        <div class="tp active" data-tab="gen">📝 Generate Bill</div>
-        <div class="tp" data-tab="ov">📊 Monthly Overview</div>
-        <div class="tp" data-tab="hist">📂 Bill History</div>
-      </div>
-
-      <div id="bt-gen" class="stab active">
-        <div class="fr" style="margin-bottom:0">
-          <div class="fg"><label>Select Class</label><select id="bCls"><option value="">Choose class</option><option>1</option><option>2</option><option>3</option><option>4</option><option>5</option><option>6</option><option>7</option><option>8</option><option>9</option><option>10</option><option>11</option><option>12</option></select></div>
-          <div class="fg"><label>Select Student</label><select id="bStu"><option value="">Choose student</option></select></div>
-        </div>
-        <div class="fr">
-          <div class="fg"><label>Billing Month</label><select id="bMo"><option value="1">January</option><option value="2">February</option><option value="3">March</option><option value="4">April</option><option value="5">May</option><option value="6">June</option><option value="7">July</option><option value="8">August</option><option value="9">September</option><option value="10">October</option><option value="11">November</option><option value="12">December</option></select></div>
-          <div class="fg"><label>Year</label><select id="bYr"><option value="2025">2025</option><option value="2026" selected>2026</option><option value="2027">2027</option></select></div>
-        </div>
-        <div id="bPrevW" style="display:none">
-          <div id="bPrev"></div>
-          <div class="np" style="display:flex;gap:9px;margin-top:14px;justify-content:center">
-            <button class="btn btn-s" id="saveBillBtn">💾 Save (Paid)</button>
-            <button class="btn btn-p" id="printBillBtn">🖼 Print</button>
-            <button class="btn btn-g" id="sendBillSMSBtn">📱 Send SMS</button>
-          </div>
-        </div>
-      </div>
-
-      <div id="bt-ov" class="stab">
-        <div class="crow">
-          <div class="fg"><label>Month</label><select id="ovMo"><option value="1">January</option><option value="2">February</option><option value="3">March</option><option value="4">April</option><option value="5">May</option><option value="6">June</option><option value="7">July</option><option value="8">August</option><option value="9">September</option><option value="10">October</option><option value="11">November</option><option value="12">December</option></select></div>
-          <div class="fg"><label>Year</label><select id="ovYr"><option value="2025">2025</option><option value="2026" selected>2026</option><option value="2027">2027</option></select></div>
-          <div class="fg"><label>Class</label><select id="ovCls"><option value="">All</option><option>1</option><option>2</option><option>3</option><option>4</option><option>5</option><option>6</option><option>7</option><option>8</option><option>9</option><option>10</option><option>11</option><option>12</option></select></div>
-          <button class="btn btn-p btn-sm" id="viewOverviewBtn" style="align-self:flex-end">View</button>
-        </div>
-        <div id="ovList"></div>
-      </div>
-
-      <div id="bt-hist" class="stab">
-        <div class="crow">
-          <div class="fg"><label>Search</label><input type="text" id="hSrch" placeholder="Name or roll..."></div>
-          <div class="fg"><label>Month</label><select id="hMo"><option value="">All</option><option value="1">January</option><option value="2">February</option><option value="3">March</option><option value="4">April</option><option value="5">May</option><option value="6">June</option><option value="7">July</option><option value="8">August</option><option value="9">September</option><option value="10">October</option><option value="11">November</option><option value="12">December</option></select></div>
-          <div class="fg"><label>Class</label><select id="hCls"><option value="">All</option><option>1</option><option>2</option><option>3</option><option>4</option><option>5</option><option>6</option><option>7</option><option>8</option><option>9</option><option>10</option><option>11</option><option>12</option></select></div>
-        </div>
-        <div id="hList" class="sgrid"></div>
-      </div>
-    </div>
+    <section id="billing" class="page hidden">
+      <h2>Billing</h2>
+      <select id="billClassFilter">
+        <option value="">Filter by Class</option>
+        <option>1</option><option>2</option><option>3</option>
+        <option>4</option><option>5</option><option>6</option>
+        <option>7</option><option>8</option><option>9</option>
+        <option>10</option><option>11</option><option>12</option>
+      </select>
+      <div id="billList"></div>
+    </section>
 
     <!-- NOTICES -->
-    <div id="page-notices" class="page">
-      <div class="ph"><h2>Notice Board</h2><p>Send messages to parents</p></div>
-      <div class="card">
-        <div class="ct">📢 Send New Notice</div>
-        <div class="fg">
-          <label>Notice Title</label>
-          <input type="text" id="noticeTitle" placeholder="e.g. School Holiday Announcement">
-        </div>
-        <div class="fg">
-          <label>Message</label>
-          <textarea id="noticeMsg" rows="4" placeholder="Type your message here..."></textarea>
-        </div>
-        <div class="fg">
-          <label>Send To</label>
-          <select id="noticeTo">
-            <option value="all">All Parents</option>
-            <option value="class">Specific Class</option>
-            <option value="select">Select Students</option>
-          </select>
-        </div>
-        <div id="noticeClassSelect" class="fg" style="display:none">
-          <label>Select Class</label>
-          <select id="noticeClass">
-            <option value="">Choose class</option>
-            <option>1</option><option>2</option><option>3</option><option>4</option><option>5</option><option>6</option><option>7</option><option>8</option><option>9</option><option>10</option><option>11</option><option>12</option>
-          </select>
-        </div>
-        <div id="noticeStudentSelect" style="display:none">
-          <label style="display:block;margin-bottom:8px;font-size:.75rem;font-weight:600;color:var(--text-mid);text-transform:uppercase">Select Students</label>
-          <div id="studentCheckList" style="max-height:200px;overflow-y:auto;border:1px solid var(--border);border-radius:8px;padding:10px"></div>
-        </div>
-        <button class="btn btn-p" id="sendNoticeBtn">📤 Send Notice</button>
-      </div>
-      <div class="sdiv">Notice History</div>
-      <div id="noticeHistory"></div>
-    </div>
-
-    <!-- REPORTS -->
-    <div id="page-reports" class="page">
-      <div class="ph"><h2>Reports</h2><p>Analytics</p></div>
-      <div class="card">
-        <div class="ct">📊 Attendance Report</div>
-        <div class="crow">
-          <div class="fg"><label>Date</label><input type="date" id="rDate"></div>
-          <div class="fg"><label>Class</label><select id="rCls"><option value="">All</option><option>1</option><option>2</option><option>3</option><option>4</option><option>5</option><option>6</option><option>7</option><option>8</option><option>9</option><option>10</option><option>11</option><option>12</option></select></div>
-          <button class="btn btn-p btn-sm" id="generateReportBtn" style="align-self:flex-end">Generate</button>
-        </div>
-        <div id="rCnt"></div>
-      </div>
-    </div>
+    <section id="notices" class="page hidden">
+      <h2>Send Notice</h2>
+      <input type="text" id="noticeTitle" placeholder="Title">
+      <textarea id="noticeMessage" placeholder="Message"></textarea>
+      <button onclick="sendNotice()">Send To All</button>
+      <div id="noticeBoard"></div>
+    </section>
 
     <!-- SESSIONS -->
-    <div id="page-sessions" class="page">
-      <div class="ph" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px">
-        <div><h2>Session Management</h2><p>Academic year control</p></div>
-        <button class="btn btn-p btn-sm" id="newSessionBtn">+ Create Session</button>
-      </div>
-      <div id="sessList"></div>
-    </div>
-
-    <!-- SETTINGS -->
-    <div id="page-settings" class="page">
-      <div class="ph"><h2>Settings</h2><p>System configuration</p></div>
-      <div class="card">
-        <div class="ct">🔐 Change Password</div>
-        <div class="fg">
-          <label>Current Password</label>
-          <input type="password" id="currentPass" placeholder="Enter current password">
-        </div>
-        <div class="fg">
-          <label>New Password</label>
-          <input type="password" id="newPass" placeholder="Enter new password">
-        </div>
-        <div class="fg">
-          <label>Confirm New Password</label>
-          <input type="password" id="confirmPass" placeholder="Confirm new password">
-        </div>
-        <button class="btn btn-p" id="changePassBtn">Update Password</button>
-      </div>
-    </div>
+    <section id="sessions" class="page hidden">
+      <h2>Session Management</h2>
+      <input type="text" id="newSession" placeholder="2027-28">
+      <button onclick="createSession()">Create Session</button>
+      <div id="sessionList"></div>
+    </section>
 
   </main>
 </div>
-</div>
 
-<!-- MODALS -->
-<div id="qrM" class="modal">
-  <div class="mbox">
-    <div class="mhdr"><h3 id="qrMT">QR Code</h3><button class="mcl" data-close="qrM">✕</button></div>
-    <div id="qrMB"></div>
-  </div>
-</div>
-
-<div id="downloadQrM" class="modal">
-  <div class="mbox">
-    <div class="mhdr"><h3>Download QR Codes</h3><button class="mcl" data-close="downloadQrM">✕</button></div>
-    <div class="fg">
-      <label>Select Class</label>
-      <select id="dlQrCls">
-        <option value="">All Classes</option>
-        <option>1</option><option>2</option><option>3</option><option>4</option><option>5</option><option>6</option><option>7</option><option>8</option><option>9</option><option>10</option><option>11</option><option>12</option>
-      </select>
-    </div>
-    <button class="btn btn-p" id="generateQRBtn">Generate QR Codes</button>
-  </div>
-</div>
-
-<div id="allQrM" class="modal">
-  <div class="mbox mw">
-    <div class="mhdr"><h3>QR Codes</h3><button class="mcl" data-close="allQrM">✕</button></div>
-    <div class="np" style="text-align:center;margin-bottom:16px"><button class="btn btn-p" onclick="window.print()">🖼 Print All</button></div>
-    <div id="allQrB"></div>
-  </div>
-</div>
-
-<div id="newSessionM" class="modal">
-  <div class="mbox">
-    <div class="mhdr"><h3>Create New Session</h3><button class="mcl" data-close="newSessionM">✕</button></div>
-    <div class="fg">
-      <label>Session Name</label>
-      <input type="text" id="newSessName" placeholder="e.g. 2027-28">
-    </div>
-    <p style="font-size:.82rem;color:var(--text-light);margin-bottom:16px">Creating a new session will archive the current session and start fresh.</p>
-    <button class="btn btn-p" id="createSessionBtn">Create Session</button>
-  </div>
-</div>
-
-<div class="twrap" id="twrap"></div>
-<div id="pr" style="display:none"></div>
-
-<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 <script type="module" src="firebase-config.js"></script>
 <script type="module" src="app.js"></script>
 
