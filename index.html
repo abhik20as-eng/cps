@@ -744,10 +744,18 @@ function init(){
   ['bMo','ovMo'].forEach(id=>{const e=document.getElementById(id);if(e)e.value=m;});
   document.getElementById('sessTag').textContent='Session '+dbCache.cur;
   populateFSess();
-  renderDash();renderStudents();renderAttR();renderSess();renderNotices();
+  renderDash();
+  renderStudents();
+  renderAttR();
+  renderSess();
+  renderNotices();
   
-  const p=new URLSearchParams(window.location.search),r=p.get('attendance');
-  if(r)markFromQR(r);
+  // Check for QR attendance AFTER everything is rendered
+  setTimeout(() => {
+    const p=new URLSearchParams(window.location.search);
+    const r=p.get('attendance');
+    if(r) markFromQR(r);
+  }, 500);
 }
 
 function populateFSess(){
