@@ -1639,18 +1639,38 @@ const s=dbCache.students.find(s=>s.id===id);if(!s)return;
 
 cb.student=s;cb.items=[{name:'Monthly Fee',price:s.monthlyFee}];
 
-// Load unpaid bills (including auto-generated monthly bills if student is admitted)
-const allBills=dbCache.bills.filter(b=>b.studentId===id);
-cb.unpaidBills=allBills.filter(b=>!b.paid||(b.total>(b.paidAmount||0)));
-
-// If student is admitted, auto-generate missing monthly bills
+// If student is admitted, auto-generate missing monthly bills first
 if (isStudentAdmitted(id)) {
-  autoGenerateMissingBills(s);
+  autoGenerateMissingBills(s).then(() => {
+    // After auto-generation, reload bills from database
+    setTimeout(() => {
+      loadUnpaidBillsAndRender(id, s);
+    }, 300);
+  });
+} else {
+  loadUnpaidBillsAndRender(id, s);
 }
 
-updBP();
-
 };
+
+// Helper function to load unpaid bills and render
+function loadUnpaidBillsAndRender(studentId, student) {
+  const mo=parseInt(document.getElementById('bMo').value);
+  const yr=parseInt(document.getElementById('bYr').value);
+  
+  // Load all bills for this student
+  const allBills=dbCache.bills.filter(b=>b.studentId===studentId);
+  
+  // Get unpaid bills EXCLUDING the current month being generated
+  cb.unpaidBills=allBills.filter(b => {
+    // Exclude current month/year being generated
+    if (b.month === mo && b.year === yr) return false;
+    // Include if unpaid or partially paid
+    return !b.paid || (b.total > (b.paidAmount || 0));
+  });
+  
+  updBP();
+}
 
 // ===== AUTO-GENERATE MISSING MONTHLY BILLS FOR ADMITTED STUDENTS =====
 async function autoGenerateMissingBills(student) {
@@ -1658,22 +1678,17 @@ async function autoGenerateMissingBills(student) {
   const currentMonth = currentDate.getMonth() + 1; // 1-12
   const currentYear = currentDate.getFullYear();
   
-  // Find the first paid bill to determine admission date
-  const paidBills = dbCache.bills
-    .filter(b => b.studentId === student.id && b.paid && b.paidAmount > 0)
-    .sort((a, b) => {
-      const dateA = new Date(a.year, a.month - 1);
-      const dateB = new Date(b.year, b.month - 1);
-      return dateA - dateB;
-    });
+  // Check if student has any paid bill (admission confirmation)
+  const hasPaidBill = dbCache.bills.some(b => b.studentId === student.id && b.paid && b.paidAmount > 0);
   
-  if (paidBills.length === 0) return; // Not admitted yet
+  if (!hasPaidBill) return; // Not admitted yet - no paid bills
   
-  const firstPaidBill = paidBills[0];
-  let startMonth = firstPaidBill.month;
-  let startYear = firstPaidBill.year;
+  // Get joining date to determine from when to generate bills
+  const joiningDate = new Date(student.joiningDate);
+  let startMonth = joiningDate.getMonth() + 1; // 1-12
+  let startYear = joiningDate.getFullYear();
   
-  // Generate bills from admission month to current month
+  // Generate bills from joining month to current month
   let month = startMonth;
   let year = startYear;
   
@@ -1756,7 +1771,14 @@ const mo=parseInt(document.getElementById('bMo').value),yr=document.getElementBy
 
 const existing=dbCache.bills.find(b=>b.studentId===s.id&&b.month===mo&&b.year==yr);
 
-const isPaid=existing&&existing.paid&&existing.paidAmount>=existing.total;
+// Check if this month's bill is already fully paid
+const isFullyPaid=existing&&existing.paid&&existing.paidAmount>=existing.total;
+
+// If current month bill exists and has partial payment, show it in the bill info
+let currentMonthPreviousPayment = 0;
+if (existing && existing.paidAmount > 0 && !isFullyPaid) {
+  currentMonthPreviousPayment = existing.paidAmount;
+}
 
 const unpaidTotal=cb.unpaidBills.reduce((a,b)=>a+(b.total-(b.paidAmount||0)),0);
 
@@ -1791,7 +1813,7 @@ document.getElementById('bPrev').innerHTML=`<div style="background:#fff;border:2
 
 <div style="font-family:'Playfair Display',serif;font-size:1.4rem;font-weight:900;color:var(--navy);text-align:center">Central Public School</div>
 
-<div style="text-align:center;margin:12px 0;font-size:.95rem;font-weight:700;color:var(--gold)">FEE RECEIPT ${isPaid?'<span class="bdg bdg-paid">PAID ✓</span>':''}</div>
+<div style="text-align:center;margin:12px 0;font-size:.95rem;font-weight:700;color:var(--gold)">FEE RECEIPT ${isFullyPaid?'<span class="bdg bdg-paid">PAID ✓</span>':''}</div>
 
 
 
@@ -1822,6 +1844,8 @@ document.getElementById('bPrev').innerHTML=`<div style="background:#fff;border:2
   <div class="np" style="margin-top:8px"><button class="btn btn-o btn-xs" onclick="addBillItem()">+ Add Item</button></div>
 
   <div style="display:flex;justify-content:space-between;padding:8px 0;font-weight:700;border-top:2px solid var(--navy);margin-top:8px"><span>Current Month Total:</span><span>₹${curTotal.toLocaleString('en-IN')}</span></div>
+
+  ${currentMonthPreviousPayment > 0 ? `<div style="display:flex;justify-content:space-between;padding:4px 0;color:#28a745;font-size:.85rem"><span>Previously Paid (${MO[mo]} ${yr}):</span><span>- ₹${currentMonthPreviousPayment.toLocaleString('en-IN')}</span></div><div style="display:flex;justify-content:space-between;padding:8px 0;font-weight:700;border-top:1px solid var(--border);margin-top:4px;color:var(--warning)"><span>Remaining for ${MO[mo]}:</span><span>₹${(curTotal - currentMonthPreviousPayment).toLocaleString('en-IN')}</span></div>` : ''}
 
 </div>
 
