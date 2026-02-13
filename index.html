@@ -295,8 +295,8 @@ body{font-family:'DM Sans',sans-serif;background:var(--cream);color:var(--text-d
           <div class="fg"><label>Select Student</label><select id="bStu" onchange="loadSBill()"><option value="">Choose student</option></select></div>
         </div>
         <div class="fr">
-          <div class="fg"><label>Billing Month</label><select id="bMo" onchange="if(cb.student)loadSBill()"><option value="1">January</option><option value="2">February</option><option value="3">March</option><option value="4">April</option><option value="5">May</option><option value="6">June</option><option value="7">July</option><option value="8">August</option><option value="9">September</option><option value="10">October</option><option value="11">November</option><option value="12">December</option></select></div>
-          <div class="fg"><label>Year</label><select id="bYr" onchange="if(cb.student)loadSBill()"><option value="2025">2025</option><option value="2026" selected>2026</option><option value="2027">2027</option></select></div>
+          <div class="fg"><label>Billing Month</label><select id="bMo" onchange="if(typeof cb !== 'undefined' && cb.student) loadSBill()"><option value="1">January</option><option value="2">February</option><option value="3">March</option><option value="4">April</option><option value="5">May</option><option value="6">June</option><option value="7">July</option><option value="8">August</option><option value="9">September</option><option value="10">October</option><option value="11">November</option><option value="12">December</option></select></div>
+          <div class="fg"><label>Year</label><select id="bYr" onchange="if(typeof cb !== 'undefined' && cb.student) loadSBill()"><option value="2025">2025</option><option value="2026" selected>2026</option><option value="2027">2027</option></select></div>
         </div>
         <div id="bPrevW" style="display:none">
           <div id="bPrev"></div>
@@ -1639,8 +1639,12 @@ const s=dbCache.students.find(s=>s.id===id);if(!s)return;
 
 cb.student=s;cb.items=[{name:'Monthly Fee',price:s.monthlyFee}];
 
+console.log('Loading bill for student:', s.name);
+console.log('Current bills in cache:', dbCache.bills.filter(b=>b.studentId===id).length);
+
 // If student is admitted, auto-generate missing monthly bills first
 if (isStudentAdmitted(id)) {
+  console.log('Student is admitted, auto-generating bills...');
   showLoader();
   await autoGenerateMissingBills(s);
   
@@ -1652,6 +1656,8 @@ if (isStudentAdmitted(id)) {
     const uid = auth.currentUser.uid;
     const billsSnap = await getDocs(collection(db, 'users', uid, 'bills'));
     dbCache.bills = billsSnap.docs.map(doc => ({id: doc.id, ...doc.data()}));
+    console.log('Reloaded bills from database. Total bills:', dbCache.bills.length);
+    console.log('Bills for this student:', dbCache.bills.filter(b=>b.studentId===id).length);
   } catch (error) {
     console.error('Error reloading bills:', error);
   }
@@ -1668,8 +1674,12 @@ function loadUnpaidBillsAndRender(studentId, student) {
   const mo=parseInt(document.getElementById('bMo').value);
   const yr=parseInt(document.getElementById('bYr').value);
   
+  console.log(`Loading unpaid bills for month: ${mo}/${yr}`);
+  
   // Load all bills for this student
   const allBills=dbCache.bills.filter(b=>b.studentId===studentId);
+  
+  console.log('All bills for student:', allBills.map(b => `${b.month}/${b.year} - Paid: ${b.paid} - Amount: ${b.paidAmount}/${b.total}`));
   
   // Get unpaid bills EXCLUDING the current month being generated
   cb.unpaidBills=allBills.filter(b => {
@@ -1678,6 +1688,8 @@ function loadUnpaidBillsAndRender(studentId, student) {
     // Include if unpaid or partially paid
     return !b.paid || (b.total > (b.paidAmount || 0));
   });
+  
+  console.log('Unpaid bills (excluding current month):', cb.unpaidBills.map(b => `${b.month}/${b.year} - Due: ₹${b.total - (b.paidAmount || 0)}`));
   
   updBP();
 }
@@ -1691,16 +1703,22 @@ async function autoGenerateMissingBills(student) {
   // Check if student has any paid bill (admission confirmation)
   const hasPaidBill = dbCache.bills.some(b => b.studentId === student.id && b.paid && b.paidAmount > 0);
   
-  if (!hasPaidBill) return; // Not admitted yet - no paid bills
+  if (!hasPaidBill) {
+    console.log('Student not admitted yet - no paid bills');
+    return; // Not admitted yet - no paid bills
+  }
   
   // Get joining date to determine from when to generate bills
   const joiningDate = new Date(student.joiningDate);
   let startMonth = joiningDate.getMonth() + 1; // 1-12
   let startYear = joiningDate.getFullYear();
   
+  console.log(`Auto-generating bills for ${student.name} from ${startMonth}/${startYear} to ${currentMonth}/${currentYear}`);
+  
   // Generate bills from joining month to current month
   let month = startMonth;
   let year = startYear;
+  let generatedCount = 0;
   
   while (year < currentYear || (year === currentYear && month <= currentMonth)) {
     // Check if bill already exists for this month
@@ -1709,6 +1727,7 @@ async function autoGenerateMissingBills(student) {
     );
     
     if (!existingBill) {
+      console.log(`Creating bill for ${month}/${year}`);
       // Create the missing bill
       const newBill = {
         studentId: student.id,
@@ -1731,9 +1750,12 @@ async function autoGenerateMissingBills(student) {
       
       try {
         await saveBillToDb(newBill);
+        generatedCount++;
       } catch (error) {
         console.error('Error auto-generating bill:', error);
       }
+    } else {
+      console.log(`Bill already exists for ${month}/${year}`);
     }
     
     // Move to next month
@@ -1743,6 +1765,8 @@ async function autoGenerateMissingBills(student) {
       year++;
     }
   }
+  
+  console.log(`Auto-generated ${generatedCount} bills`);
 }
 
 window.addBillItem = function(){
