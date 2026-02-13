@@ -465,7 +465,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--cream);color:var(--text-d
 // ===== FIREBASE IMPORTS =====
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js';
 import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, onAuthStateChanged, updatePassword } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js';
-import { getFirestore, collection, addDoc, getDocs, getDoc, doc, setDoc, deleteDoc } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js';
+import { getFirestore, collection, addDoc, getDocs, getDoc, doc, setDoc, deleteDoc, onSnapshot } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js';
 
 // ===== FIREBASE CONFIG =====
 const firebaseConfig = {
@@ -494,7 +494,7 @@ let dbCache = {
 };
 
 let currentUser = null;
-let attendanceCheckInterval = null;
+let unsubscribers = [];
 
 // ===== HELPER FUNCTIONS =====
 function showLoader(){document.getElementById('loader').classList.add('show');}
@@ -513,11 +513,11 @@ onAuthStateChanged(auth, async (user) => {
     currentUser = user;
     document.getElementById('userEmail').textContent = user.email;
     await loadAllData();
-    startAttendancePolling();
+    setupRealtimeListeners();
     showApp();
   } else {
     currentUser = null;
-    stopAttendancePolling();
+    stopRealtimeListeners();
     document.getElementById('mainApp').style.display='none';
     document.getElementById('loginPage').style.display='flex';
   }
@@ -599,53 +599,91 @@ window.changePassword = async function() {
   hideLoader();
 };
 
-// ===== REALTIME ATTENDANCE UPDATES (FIXED) =====
-function startAttendancePolling() {
-  if (attendanceCheckInterval) return;
+// ===== REALTIME LISTENERS (FIXED FOR MULTI-DEVICE) =====
+function setupRealtimeListeners() {
+  if (!auth.currentUser) return;
   
-  attendanceCheckInterval = setInterval(async () => {
-    if (!auth.currentUser) return;
-    
-    try {
-      const today = new Date().toISOString().split('T')[0];
-      const attendanceRef = doc(db, 'users', auth.currentUser.uid, 'attendance', today);
-      const docSnap = await getDoc(attendanceRef);
+  const uid = auth.currentUser.uid;
+  
+  // Students listener
+  const studentsUnsubscribe = onSnapshot(
+    collection(db, 'users', uid, 'students'),
+    (snapshot) => {
+      dbCache.students = snapshot.docs.map(doc => ({id: doc.id, ...doc.data()}));
+      const currentPage = document.querySelector('.page.active')?.id;
+      if (currentPage === 'page-students') renderStudents();
+      if (currentPage === 'page-dashboard') renderDash();
+    },
+    (error) => console.error('Students listener error:', error)
+  );
+  
+  // Attendance listener
+  const attendanceUnsubscribe = onSnapshot(
+    collection(db, 'users', uid, 'attendance'),
+    (snapshot) => {
+      const oldAttendance = {...dbCache.attendance};
+      dbCache.attendance = {};
       
-      if (docSnap.exists()) {
-        const newData = docSnap.data();
-        const oldData = dbCache.attendance[today] || {};
-        
-        const oldKeys = Object.keys(oldData);
-        const newKeys = Object.keys(newData);
-        
-        // Check if there are new entries
-        if (newKeys.length > oldKeys.length) {
-          dbCache.attendance[today] = newData;
-          
-          // Update UI
-          const currentPage = document.querySelector('.page.active')?.id;
-          if (currentPage === 'page-dashboard') renderDash();
-          if (currentPage === 'page-attendance') renderAttR();
-          
-          // Find new student
-          const newRoll = newKeys.find(k => !oldKeys.includes(k));
-          if (newRoll && newData[newRoll]) {
-            const studentData = newData[newRoll];
-            toast(`✓ ${studentData.name} marked present at ${studentData.time}`, 'suc', 4000);
-          }
+      snapshot.docs.forEach(doc => {
+        dbCache.attendance[doc.id] = doc.data();
+      });
+      
+      // Check for new attendance entries
+      const today = new Date().toISOString().split('T')[0];
+      const todayOld = oldAttendance[today] || {};
+      const todayNew = dbCache.attendance[today] || {};
+      
+      const oldKeys = Object.keys(todayOld);
+      const newKeys = Object.keys(todayNew);
+      
+      // Find new entries
+      newKeys.forEach(roll => {
+        if (!oldKeys.includes(roll) && todayNew[roll]) {
+          const studentData = todayNew[roll];
+          toast(`✓ ${studentData.name} marked present at ${studentData.time}`, 'suc', 4000);
         }
+      });
+      
+      const currentPage = document.querySelector('.page.active')?.id;
+      if (currentPage === 'page-dashboard') renderDash();
+      if (currentPage === 'page-attendance') renderAttR();
+      if (currentPage === 'page-reports') renderRpt();
+    },
+    (error) => console.error('Attendance listener error:', error)
+  );
+  
+  // Bills listener
+  const billsUnsubscribe = onSnapshot(
+    collection(db, 'users', uid, 'bills'),
+    (snapshot) => {
+      dbCache.bills = snapshot.docs.map(doc => ({id: doc.id, ...doc.data()}));
+      const currentPage = document.querySelector('.page.active')?.id;
+      if (currentPage === 'page-billing') {
+        renderHist();
+        renderOv();
       }
-    } catch (error) {
-      console.error('Attendance polling error:', error);
-    }
-  }, 3000); // Check every 3 seconds
+      if (currentPage === 'page-dashboard') renderDash();
+    },
+    (error) => console.error('Bills listener error:', error)
+  );
+  
+  // Notices listener
+  const noticesUnsubscribe = onSnapshot(
+    collection(db, 'users', uid, 'notices'),
+    (snapshot) => {
+      dbCache.notices = snapshot.docs.map(doc => ({id: doc.id, ...doc.data()}));
+      const currentPage = document.querySelector('.page.active')?.id;
+      if (currentPage === 'page-notices') renderNotices();
+    },
+    (error) => console.error('Notices listener error:', error)
+  );
+  
+  unsubscribers = [studentsUnsubscribe, attendanceUnsubscribe, billsUnsubscribe, noticesUnsubscribe];
 }
 
-function stopAttendancePolling() {
-  if (attendanceCheckInterval) {
-    clearInterval(attendanceCheckInterval);
-    attendanceCheckInterval = null;
-  }
+function stopRealtimeListeners() {
+  unsubscribers.forEach(unsub => unsub());
+  unsubscribers = [];
 }
 
 // ===== DATA LOADING =====
@@ -866,12 +904,10 @@ window.regStudent = async function(e){
   };
   
   try {
-    const saved = await saveStudent(s);
-    dbCache.students.push(saved);
+    await saveStudent(s);
     toast('Registered: '+s.name,'suc');
     document.getElementById('sForm').reset();
     document.getElementById('rj').valueAsDate=new Date();
-    renderStudents();renderDash();
   } catch (error) {
     toast('Error registering','err');
   }
@@ -915,8 +951,6 @@ window.delStu = async function(id){
   showLoader();
   try {
     await deleteDoc(doc(db, 'users', auth.currentUser.uid, 'students', id));
-    dbCache.students=dbCache.students.filter(s=>s.id!==id);
-    renderStudents();renderDash();
     toast('Deleted','inf');
   } catch (error) {
     toast('Error deleting','err');
@@ -988,7 +1022,22 @@ window.generateQRDownload = function(){
   },130);
 };
 
-// ===== ATTENDANCE (FIXED - NO REDIRECT) =====
+// ===== ATTENDANCE WITH CLASS FILTER FIRST =====
+window.updateAttendanceClassFilter = function(){
+  const cls = document.getElementById('scanCls').value;
+  const input = document.getElementById('scanIn');
+  
+  if(!cls) {
+    input.disabled = true;
+    input.placeholder = 'Select class first';
+    input.value = '';
+  } else {
+    input.disabled = false;
+    input.placeholder = 'Enter roll number...';
+    input.focus();
+  }
+};
+
 window.markFromQR = async function(r){
   const s=dbCache.students.find(s=>s.rollNumber===r);
   if(!s){
@@ -1007,50 +1056,58 @@ window.markFromQR = async function(r){
   }
   
   const time=new Date().toLocaleTimeString('en-IN');
-  dbCache.attendance[td][r]={name:s.name,class:s.class,time};
   
-  showLoader();
   try {
     await saveAttendance(td, r, {name:s.name,class:s.class,time});
-    
-    // Update UI
-    renderDash();
-    renderAttR();
-    
     toast('✓ Attendance Marked! '+s.name+' (Class '+s.class+') at '+time, 'suc', 5000);
-    
-    // Clean URL
     window.history.replaceState({}, document.title, window.location.pathname);
-    
   } catch (error) {
     toast('Error saving attendance','err');
   }
-  hideLoader();
 };
 
 window.markAtt = async function(){
-  const r=document.getElementById('scanIn').value.trim();if(!r)return;
-  const s=dbCache.students.find(s=>s.rollNumber===r),f=document.getElementById('sFeed');f.style.display='flex';
-  if(!s){f.className='sfeed err';f.innerHTML='✗ Not found: <b>'+r+'</b>';}
-  else{
-    const td=new Date().toISOString().split('T')[0];if(!dbCache.attendance[td])dbCache.attendance[td]={};
-    if(dbCache.attendance[td][r]){f.className='sfeed wrn';f.innerHTML='⚠ Already marked — <b>'+s.name+'</b> at '+dbCache.attendance[td][r].time;}
-    else{
-      const time=new Date().toLocaleTimeString('en-IN');
-      dbCache.attendance[td][r]={name:s.name,class:s.class,time};
-      showLoader();
+  const cls = document.getElementById('scanCls').value;
+  const r = document.getElementById('scanIn').value.trim();
+  
+  if(!cls) {
+    toast('Please select class first', 'err');
+    return;
+  }
+  
+  if(!r) return;
+  
+  const f = document.getElementById('sFeed');
+  f.style.display='flex';
+  
+  // Find student in selected class
+  const s = dbCache.students.find(s => s.rollNumber === r && s.class === cls);
+  
+  if(!s){
+    f.className='sfeed err';
+    f.innerHTML='✗ Student not found in Class ' + cls + ': <b>' + r + '</b>';
+  } else {
+    const td = new Date().toISOString().split('T')[0];
+    if(!dbCache.attendance[td]) dbCache.attendance[td] = {};
+    
+    if(dbCache.attendance[td][r]){
+      f.className='sfeed wrn';
+      f.innerHTML='⚠ Already marked — <b>' + s.name + '</b> at ' + dbCache.attendance[td][r].time;
+    } else {
+      const time = new Date().toLocaleTimeString('en-IN');
+      
       try {
-        await saveAttendance(td, r, {name:s.name,class:s.class,time});
-        renderAttR();renderDash();
+        await saveAttendance(td, r, {name:s.name, class:s.class, time});
         f.className='sfeed suc';
-        f.innerHTML='✓ <b>'+s.name+'</b> · Class '+s.class+' · 🕐 '+time;
+        f.innerHTML='✓ <b>' + s.name + '</b> · Class ' + s.class + ' · 🕐 ' + time;
       } catch (error) {
         toast('Error saving','err');
       }
-      hideLoader();
     }
   }
-  document.getElementById('scanIn').value='';setTimeout(()=>{f.style.display='none';},3500);
+  
+  document.getElementById('scanIn').value='';
+  setTimeout(() => {f.style.display='none';}, 3500);
 };
 
 function renderAttR(){
@@ -1065,7 +1122,7 @@ function renderAttR(){
   h+='</div>';document.getElementById('aReport').innerHTML=h;
 }
 
-// ===== BILLING (WITH DEPOSIT & ITEMS) =====
+// ===== BILLING (FIXED DEPOSIT CALCULATION) =====
 let cb={student:null,items:[],unpaidBills:[]};
 
 window.loadBStu = function(){
@@ -1183,8 +1240,15 @@ window.saveBill = async function(){
   try {
     let remainingDeposit=depositAmount;
     
-    // Pay old unpaid bills first
-    for(let oldBill of cb.unpaidBills){
+    // Sort unpaid bills by date (oldest first)
+    const sortedUnpaidBills = [...cb.unpaidBills].sort((a,b) => {
+      const dateA = new Date(a.year, a.month-1);
+      const dateB = new Date(b.year, b.month-1);
+      return dateA - dateB;
+    });
+    
+    // Pay old unpaid bills first (FIFO)
+    for(let oldBill of sortedUnpaidBills){
       if(remainingDeposit<=0)break;
       
       const oldBillUnpaid=oldBill.total-(oldBill.paidAmount||0);
@@ -1196,16 +1260,14 @@ window.saveBill = async function(){
       
       await saveBillToDb(oldBill);
       
-      const cacheIdx=dbCache.bills.findIndex(b=>b.id===oldBill.id);
-      if(cacheIdx!==-1)dbCache.bills[cacheIdx]=oldBill;
-      
       remainingDeposit-=paymentForThisBill;
     }
     
-    // Create/update current month bill
-    dbCache.bills=dbCache.bills.filter(b=>!(b.studentId===s.id&&b.month===mo&&b.year===yr));
+    // Create/update current month bill with remaining deposit
+    const existingCurrentBill = dbCache.bills.find(b=>b.studentId===s.id&&b.month===mo&&b.year===yr);
     
     const newBill={
+      id: existingCurrentBill?.id,
       studentId:s.id,
       studentName:s.name,
       studentClass:s.class,
@@ -1218,20 +1280,23 @@ window.saveBill = async function(){
       paidAmount:Math.min(remainingDeposit,curTotal),
       paid:remainingDeposit>=curTotal,
       items:[...cb.items],
-      createdAt:new Date().toISOString(),
+      createdAt: existingCurrentBill?.createdAt || new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
       session:s.session
     };
     
-    const saved=await saveBillToDb(newBill);
-    dbCache.bills.push(saved);
-    
-    renderDash();renderHist();updBP();
+    await saveBillToDb(newBill);
     
     if(depositAmount>=grandTotal){
       toast('Bill fully paid for '+s.name,'suc');
     }else{
-      toast('Partial payment recorded: ₹'+depositAmount.toLocaleString('en-IN'),'suc');
+      const remaining = grandTotal - depositAmount;
+      toast('Partial payment: ₹'+depositAmount.toLocaleString('en-IN')+' paid. Remaining: ₹'+remaining.toLocaleString('en-IN'),'suc',5000);
     }
+    
+    // Reload to show updated bills
+    setTimeout(() => loadSBill(), 500);
+    
   }catch(error){
     console.error('Error saving bill:',error);
     toast('Error saving bill','err');
@@ -1347,15 +1412,13 @@ window.sendNotice = async function(){
       recipients:recipients.map(r=>({id:r.id,name:r.name,phone:r.phoneNumber}))
     };
     
-    const saved = await saveNoticeToDb(notice);
-    dbCache.notices.push(saved);
+    await saveNoticeToDb(notice);
     
     toast(`Notice sent to ${recipients.length} parents!`,'suc');
     document.getElementById('noticeTitle').value='';
     document.getElementById('noticeMsg').value='';
     document.getElementById('noticeTo').value='all';
     noticeTypeChange();
-    renderNotices();
   } catch (error) {
     toast('Error sending notice','err');
   }
