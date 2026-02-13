@@ -295,8 +295,8 @@ body{font-family:'DM Sans',sans-serif;background:var(--cream);color:var(--text-d
           <div class="fg"><label>Select Student</label><select id="bStu" onchange="loadSBill()"><option value="">Choose student</option></select></div>
         </div>
         <div class="fr">
-          <div class="fg"><label>Billing Month</label><select id="bMo"><option value="1">January</option><option value="2">February</option><option value="3">March</option><option value="4">April</option><option value="5">May</option><option value="6">June</option><option value="7">July</option><option value="8">August</option><option value="9">September</option><option value="10">October</option><option value="11">November</option><option value="12">December</option></select></div>
-          <div class="fg"><label>Year</label><select id="bYr"><option value="2025">2025</option><option value="2026" selected>2026</option><option value="2027">2027</option></select></div>
+          <div class="fg"><label>Billing Month</label><select id="bMo" onchange="if(cb.student)loadSBill()"><option value="1">January</option><option value="2">February</option><option value="3">March</option><option value="4">April</option><option value="5">May</option><option value="6">June</option><option value="7">July</option><option value="8">August</option><option value="9">September</option><option value="10">October</option><option value="11">November</option><option value="12">December</option></select></div>
+          <div class="fg"><label>Year</label><select id="bYr" onchange="if(cb.student)loadSBill()"><option value="2025">2025</option><option value="2026" selected>2026</option><option value="2027">2027</option></select></div>
         </div>
         <div id="bPrevW" style="display:none">
           <div id="bPrev"></div>
@@ -1629,7 +1629,7 @@ dbCache.students.filter(s=>s.class===cls&&s.session===dbCache.cur).forEach(s=>{c
 
 };
 
-window.loadSBill = function(){
+window.loadSBill = async function(){
 
 const id=document.getElementById('bStu').value;
 
@@ -1641,15 +1641,25 @@ cb.student=s;cb.items=[{name:'Monthly Fee',price:s.monthlyFee}];
 
 // If student is admitted, auto-generate missing monthly bills first
 if (isStudentAdmitted(id)) {
-  autoGenerateMissingBills(s).then(() => {
-    // After auto-generation, reload bills from database
-    setTimeout(() => {
-      loadUnpaidBillsAndRender(id, s);
-    }, 300);
-  });
-} else {
-  loadUnpaidBillsAndRender(id, s);
+  showLoader();
+  await autoGenerateMissingBills(s);
+  
+  // Wait a bit for Firebase to update
+  await new Promise(resolve => setTimeout(resolve, 500));
+  
+  // Reload all bills from database to get the latest data
+  try {
+    const uid = auth.currentUser.uid;
+    const billsSnap = await getDocs(collection(db, 'users', uid, 'bills'));
+    dbCache.bills = billsSnap.docs.map(doc => ({id: doc.id, ...doc.data()}));
+  } catch (error) {
+    console.error('Error reloading bills:', error);
+  }
+  
+  hideLoader();
 }
+
+loadUnpaidBillsAndRender(id, s);
 
 };
 
