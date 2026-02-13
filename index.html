@@ -135,7 +135,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--cream);color:var(--text-d
 </head>
 <body>
 
-<body>
+
 
 <!-- ADD LOADER -->
 <div id="loader" class="loader">
@@ -144,7 +144,6 @@ body{font-family:'DM Sans',sans-serif;background:var(--cream);color:var(--text-d
 </div>
 
 <!-- LOGIN PAGE -->
-      <!-- LOGIN PAGE -->
 <div id="loginPage" class="login-wrap">
   <div class="login-box">
     <h1>Central Public School</h1>
@@ -164,7 +163,6 @@ body{font-family:'DM Sans',sans-serif;background:var(--cream);color:var(--text-d
       New user? Enter email and password (min 6 chars) to auto-create account
     </p>
   </div>
-</div>
 </div>
 
 <!-- MAIN APP -->
@@ -460,7 +458,6 @@ body{font-family:'DM Sans',sans-serif;background:var(--cream);color:var(--text-d
 
 <div class="twrap" id="twrap"></div>
 <div id="pr" style="display:none"></div>
-
 <script type="module">
 // ===== FIREBASE IMPORTS =====
 
@@ -1486,32 +1483,6 @@ list.forEach((s,i)=>{
 
 // ===== ATTENDANCE WITH CLASS FILTER FIRST =====
 
-window.updateAttendanceClassFilter = function(){
-
-const cls = document.getElementById('scanCls').value;
-
-const input = document.getElementById('scanIn');
-
-if(!cls) {
-
-input.disabled = true;
-
-input.placeholder = 'Select class first';
-
-input.value = '';
-
-} else {
-
-input.disabled = false;
-
-input.placeholder = 'Enter roll number...';
-
-input.focus();
-
-}
-
-};
-
 window.markFromQR = async function(r){
 
 const s=dbCache.students.find(s=>s.rollNumber===r);
@@ -1560,17 +1531,7 @@ toast('Error saving attendance','err');
 
 window.markAtt = async function(){
 
-const cls = document.getElementById('scanCls').value;
-
 const r = document.getElementById('scanIn').value.trim();
-
-if(!cls) {
-
-toast('Please select class first', 'err');
-
-return;
-
-}
 
 if(!r) return;
 
@@ -1578,15 +1539,15 @@ const f = document.getElementById('sFeed');
 
 f.style.display='flex';
 
-// Find student in selected class
+// Find student by roll number (no class filter needed)
 
-const s = dbCache.students.find(s => s.rollNumber === r && s.class === cls);
+const s = dbCache.students.find(s => s.rollNumber === r);
 
 if(!s){
 
 f.className='sfeed err';
 
-f.innerHTML='✗ Student not found in Class ' + cls + ': <b>' + r + '</b>';
+f.innerHTML='✗ Student not found with Roll Number: <b>' + r + '</b>';
 
 } else {
 
@@ -1801,22 +1762,26 @@ const unpaidTotal=cb.unpaidBills.reduce((a,b)=>a+(b.total-(b.paidAmount||0)),0);
 
 const grandTotal=curTotal+unpaidTotal;
 
+// Get current deposit value if exists (to preserve user input during re-render)
+let currentDeposit = grandTotal;
+const existingDepositInput = document.getElementById('depositAmount');
+if (existingDepositInput && existingDepositInput.value) {
+  const parsed = parseFloat(existingDepositInput.value);
+  if (!isNaN(parsed)) currentDeposit = parsed;
+}
+
 // Payment status message
 let paymentStatusMessage = '';
-const depositInput = document.getElementById('depositAmount');
-if (depositInput && depositInput.value) {
-  const depositAmount = parseFloat(depositInput.value);
-  if (!isNaN(depositAmount)) {
-    if (depositAmount >= grandTotal) {
-      paymentStatusMessage = '<div style="margin:12px 0;padding:12px;background:#d4edda;border:1px solid #28a745;border-radius:8px;color:#155724;font-weight:600;text-align:center">✓ Thank you for full payment!</div>';
-    } else if (depositAmount > 0) {
-      const remaining = grandTotal - depositAmount;
-      paymentStatusMessage = `<div style="margin:12px 0;padding:12px;background:#fff3cd;border:1px solid #ffc107;border-radius:8px;color:#856404">
-        <div style="font-weight:600;margin-bottom:4px">Partial Payment</div>
-        <div style="font-size:.85rem">Deposit: ₹${depositAmount.toLocaleString('en-IN')}</div>
-        <div style="font-size:.85rem;font-weight:700;margin-top:4px;color:#dc3545">Remaining Due: ₹${remaining.toLocaleString('en-IN')}</div>
-      </div>`;
-    }
+if (currentDeposit > 0) {
+  if (currentDeposit >= grandTotal) {
+    paymentStatusMessage = '<div style="margin:12px 0;padding:12px;background:#d4edda;border:1px solid #28a745;border-radius:8px;color:#155724;font-weight:600;text-align:center">✓ Thank you for full payment!</div>';
+  } else {
+    const remaining = grandTotal - currentDeposit;
+    paymentStatusMessage = `<div style="margin:12px 0;padding:12px;background:#fff3cd;border:1px solid #ffc107;border-radius:8px;color:#856404">
+      <div style="font-weight:600;margin-bottom:4px">Partial Payment</div>
+      <div style="font-size:.85rem">Deposit: ₹${currentDeposit.toLocaleString('en-IN')}</div>
+      <div style="font-size:.85rem;font-weight:700;margin-top:4px;color:#dc3545">Remaining Due: ₹${remaining.toLocaleString('en-IN')}</div>
+    </div>`;
   }
 }
 
@@ -1886,7 +1851,7 @@ ${cb.unpaidBills.length>0?`<div style="margin:12px 0;padding:12px;background:#ff
 
   <label style="display:block;margin-bottom:5px;font-size:.75rem;font-weight:600;color:var(--text-mid)">DEPOSIT AMOUNT (₹)</label>
 
-  <input type="number" id="depositAmount" placeholder="Enter amount" style="width:100%;padding:10px;border:1.5px solid var(--border);border-radius:8px;font-size:.9rem" value="${grandTotal}" oninput="updBP()">
+  <input type="number" id="depositAmount" placeholder="Enter amount" style="width:100%;padding:10px;border:1.5px solid var(--border);border-radius:8px;font-size:.9rem" value="${currentDeposit}">
 
   <div style="margin-top:8px;font-size:.75rem;color:var(--text-light)">Enter the amount being paid. Remaining will be carried forward.</div>
 
@@ -1896,7 +1861,20 @@ ${paymentStatusMessage}
 
 <div style="text-align:center;font-size:.72rem;color:var(--text-light);margin-top:12px">Thank you. Central Public School</div>
 
-  </div>`;}
+  </div>`;
+
+// Add event listener after rendering
+setTimeout(() => {
+  const depositInput = document.getElementById('depositAmount');
+  if (depositInput) {
+    // Remove old listener to prevent duplicates
+    depositInput.removeEventListener('input', updBP);
+    // Add new listener
+    depositInput.addEventListener('input', updBP);
+  }
+}, 50);
+
+}
 
 window.saveBill = async function(){
 
