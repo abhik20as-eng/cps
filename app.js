@@ -56,11 +56,21 @@ let unsubscribers = [];
 
 let isInitialLoad = true;
 
+let renderQueue = new Set();
+
+let renderTimeout = null;
+
 // ===== HELPER FUNCTIONS =====
 
-function showLoader(){document.getElementById('loader').classList.add('show');}
+function showLoader(){
+  const loader = document.getElementById('loader');
+  if(loader) loader.classList.add('show');
+}
 
-function hideLoader(){document.getElementById('loader').classList.remove('show');}
+function hideLoader(){
+  const loader = document.getElementById('loader');
+  if(loader) loader.classList.remove('show');
+}
 
 window.toast = function(msg,type='inf',dur=3000){
 
@@ -74,6 +84,27 @@ w.appendChild(t);setTimeout(()=>t.remove(),dur);
 
 };
 
+// ===== SMART RENDERING QUEUE (PREVENTS MULTIPLE RENDERS) =====
+
+function queueRender(renderFunc) {
+  renderQueue.add(renderFunc);
+  
+  if (renderTimeout) {
+    clearTimeout(renderTimeout);
+  }
+  
+  renderTimeout = setTimeout(() => {
+    renderQueue.forEach(func => {
+      try {
+        func();
+      } catch (error) {
+        console.error('Render error:', error);
+      }
+    });
+    renderQueue.clear();
+  }, 100); // Batch renders within 100ms
+}
+
 // ===== QR ATTENDANCE CHECKING =====
 
 function checkQRAttendance() {
@@ -84,7 +115,7 @@ const roll = params.get('attendance');
 
 if (roll && auth.currentUser) {
 
-console.log('QR attendance detected for roll:', roll);
+console.log('📲 QR attendance detected for roll:', roll);
 
 markFromQR(roll);
 
@@ -100,7 +131,9 @@ if (user) {
 
 currentUser = user;
 
-document.getElementById('userEmail').textContent = user.email;
+const emailEl = document.getElementById('userEmail');
+
+if(emailEl) emailEl.textContent = user.email;
 
 await loadAllData();
 
@@ -117,9 +150,13 @@ currentUser = null;
 
 stopRealtimeListeners();
 
-document.getElementById('mainApp').style.display='none';
+const mainApp = document.getElementById('mainApp');
 
-document.getElementById('loginPage').style.display='flex';
+const loginPage = document.getElementById('loginPage');
+
+if(mainApp) mainApp.style.display='none';
+
+if(loginPage) loginPage.style.display='flex';
 
 }
 
@@ -193,7 +230,9 @@ try {
 
 await signOut(auth);
 
-document.getElementById('loginForm').reset();
+const form = document.getElementById('loginForm');
+
+if(form) form.reset();
 
 toast('Logged out','inf');
 
@@ -261,7 +300,7 @@ hideLoader();
 
 };
 
-// ===== REALTIME LISTENERS (FIXED FOR MULTI-DEVICE) =====
+// ===== REALTIME LISTENERS (FULLY OPTIMIZED FOR MOBILE) =====
 
 function setupRealtimeListeners() {
 
@@ -271,35 +310,59 @@ const uid = auth.currentUser.uid;
 
 console.log('🔥 Setting up real-time listeners for user:', uid);
 
-// Students listener
-
+// Students listener - OPTIMIZED
 const studentsUnsubscribe = onSnapshot(
 
 collection(db, 'users', uid, 'students'),
+
+{ includeMetadataChanges: false }, // Only get server changes
 
 (snapshot) => {
 
   console.log('📚 Students update:', snapshot.docs.length, 'documents');
 
+  
+
+  // Update cache immediately
+
   dbCache.students = snapshot.docs.map(doc => ({id: doc.id, ...doc.data()}));
+
+  
+
+  // Queue renders instead of immediate render
 
   const currentPage = document.querySelector('.page.active')?.id;
 
-  if (currentPage === 'page-students') renderStudents();
+  if (currentPage === 'page-students') {
 
-  if (currentPage === 'page-dashboard') renderDash();
+    queueRender(renderStudents);
+
+  }
+
+  if (currentPage === 'page-dashboard') {
+
+    queueRender(renderDash);
+
+  }
 
 },
 
-(error) => console.error('❌ Students listener error:', error)
+(error) => {
+
+  console.error('❌ Students listener error:', error);
+
+  toast('Sync error: Students', 'err', 2000);
+
+}
 
 );
 
-// Attendance listener - ENHANCED FOR REAL-TIME SYNC
-
+// Attendance listener - CRITICAL FOR MOBILE SYNC
 const attendanceUnsubscribe = onSnapshot(
 
 collection(db, 'users', uid, 'attendance'),
+
+{ includeMetadataChanges: false },
 
 (snapshot) => {
 
@@ -311,9 +374,11 @@ collection(db, 'users', uid, 'attendance'),
 
   const previousAttendance = JSON.parse(JSON.stringify(dbCache.attendance));
 
-  dbCache.attendance = {};
-
   
+
+  // Update cache
+
+  dbCache.attendance = {};
 
   snapshot.docs.forEach(doc => {
 
@@ -355,57 +420,95 @@ collection(db, 'users', uid, 'attendance'),
 
   
 
-  // Update UI on all relevant pages
+  // Queue UI updates
 
   const currentPage = document.querySelector('.page.active')?.id;
 
-  if (currentPage === 'page-dashboard') renderDash();
+  if (currentPage === 'page-dashboard') {
 
-  if (currentPage === 'page-attendance') renderAttR();
+    queueRender(renderDash);
 
-  if (currentPage === 'page-reports') renderRpt();
+  }
+
+  if (currentPage === 'page-attendance') {
+
+    queueRender(renderAttR);
+
+  }
+
+  if (currentPage === 'page-reports') {
+
+    queueRender(renderRpt);
+
+  }
 
 },
 
-(error) => console.error('❌ Attendance listener error:', error)
+(error) => {
+
+  console.error('❌ Attendance listener error:', error);
+
+  toast('Sync error: Attendance', 'err', 2000);
+
+}
 
 );
 
-// Bills listener
-
+// Bills listener - OPTIMIZED
 const billsUnsubscribe = onSnapshot(
 
 collection(db, 'users', uid, 'bills'),
+
+{ includeMetadataChanges: false },
 
 (snapshot) => {
 
   console.log('💰 Bills update:', snapshot.docs.length, 'documents');
 
+  
+
   dbCache.bills = snapshot.docs.map(doc => ({id: doc.id, ...doc.data()}));
+
+  
 
   const currentPage = document.querySelector('.page.active')?.id;
 
   if (currentPage === 'page-billing') {
 
-    renderHist();
+    queueRender(() => {
 
-    renderOv();
+      renderHist();
+
+      renderOv();
+
+    });
 
   }
 
-  if (currentPage === 'page-dashboard') renderDash();
+  if (currentPage === 'page-dashboard') {
+
+    queueRender(renderDash);
+
+  }
 
 },
 
-(error) => console.error('❌ Bills listener error:', error)
+(error) => {
+
+  console.error('❌ Bills listener error:', error);
+
+  toast('Sync error: Bills', 'err', 2000);
+
+}
 
 );
 
 // Notices listener
-
 const noticesUnsubscribe = onSnapshot(
 
 collection(db, 'users', uid, 'notices'),
+
+{ includeMetadataChanges: false },
 
 (snapshot) => {
 
@@ -413,13 +516,25 @@ collection(db, 'users', uid, 'notices'),
 
   dbCache.notices = snapshot.docs.map(doc => ({id: doc.id, ...doc.data()}));
 
+  
+
   const currentPage = document.querySelector('.page.active')?.id;
 
-  if (currentPage === 'page-notices') renderNotices();
+  if (currentPage === 'page-notices') {
+
+    queueRender(renderNotices);
+
+  }
 
 },
 
-(error) => console.error('❌ Notices listener error:', error)
+(error) => {
+
+  console.error('❌ Notices listener error:', error);
+
+  toast('Sync error: Notices', 'err', 2000);
+
+}
 
 );
 
@@ -427,7 +542,7 @@ unsubscribers = [studentsUnsubscribe, attendanceUnsubscribe, billsUnsubscribe, n
 
 console.log('✅ All real-time listeners active');
 
-// Mark initial load complete after 1 second
+// Mark initial load complete after 2 seconds
 
 setTimeout(() => {
 
@@ -435,7 +550,7 @@ isInitialLoad = false;
 
 console.log('🎯 Initial load complete - real-time notifications enabled');
 
-}, 1000);
+}, 2000);
 
 }
 
@@ -557,6 +672,8 @@ await setDoc(doc(db, 'settings', auth.currentUser.uid), {
 
 });
 
+console.log('✅ Settings saved');
+
 } catch (error) {
 
 console.error('Error saving settings:', error);
@@ -579,6 +696,8 @@ if (student.id) {
 
   await setDoc(doc(db, 'users', uid, 'students', id), data);
 
+  console.log('✅ Student updated:', data.name);
+
 } else {
 
   const {id, ...data} = student;
@@ -586,6 +705,8 @@ if (student.id) {
   const docRef = await addDoc(collection(db, 'users', uid, 'students'), data);
 
   student.id = docRef.id;
+
+  console.log('✅ Student created:', data.name);
 
 }
 
@@ -637,6 +758,8 @@ if (bill.id) {
 
   await setDoc(doc(db, 'users', uid, 'bills', id), data);
 
+  console.log('✅ Bill updated:', data.studentName);
+
 } else {
 
   const {id, ...data} = bill;
@@ -644,6 +767,8 @@ if (bill.id) {
   const docRef = await addDoc(collection(db, 'users', uid, 'bills'), data);
 
   bill.id = docRef.id;
+
+  console.log('✅ Bill created:', data.studentName);
 
 }
 
@@ -670,6 +795,8 @@ const {id, ...data} = notice;
 const docRef = await addDoc(collection(db, 'users', auth.currentUser.uid, 'notices'), data);
 
 notice.id = docRef.id;
+
+console.log('✅ Notice created:', data.title);
 
 return notice;
 
@@ -700,9 +827,13 @@ function getUnpaidBillsForStudent(studentId) {
 
 function showApp(){
 
-document.getElementById('loginPage').style.display='none';
+const loginPage = document.getElementById('loginPage');
 
-document.getElementById('mainApp').style.display='block';
+const mainApp = document.getElementById('mainApp');
+
+if(loginPage) loginPage.style.display='none';
+
+if(mainApp) mainApp.style.display='block';
 
 init();
 
@@ -744,17 +875,25 @@ document.getElementById('rr').value='';
 
 function init(){
 
-document.getElementById('rj').valueAsDate=new Date();
+const rj = document.getElementById('rj');
 
-document.getElementById('aDate').valueAsDate=new Date();
+const aDate = document.getElementById('aDate');
 
-document.getElementById('rDate').valueAsDate=new Date();
+const rDate = document.getElementById('rDate');
+
+if(rj) rj.valueAsDate=new Date();
+
+if(aDate) aDate.valueAsDate=new Date();
+
+if(rDate) rDate.valueAsDate=new Date();
 
 const m=new Date().getMonth()+1;
 
 ['bMo','ovMo'].forEach(id=>{const e=document.getElementById(id);if(e)e.value=m;});
 
-document.getElementById('sessTag').textContent='Session '+dbCache.cur;
+const sessTag = document.getElementById('sessTag');
+
+if(sessTag) sessTag.textContent='Session '+dbCache.cur;
 
 populateFSess();
 
@@ -774,6 +913,8 @@ function populateFSess(){
 
 const s=document.getElementById('fSess');
 
+if(!s) return;
+
 s.innerHTML='<option value="">All Sessions</option>';
 
 [...new Set(dbCache.students.map(x=>x.session).filter(Boolean))].sort().reverse().forEach(x=>{const o=document.createElement('option');o.value=x;o.textContent='Session '+x;s.appendChild(o);});
@@ -786,7 +927,9 @@ document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
 
 document.querySelectorAll('.ni').forEach(x=>x.classList.remove('active'));
 
-document.getElementById('page-'+n).classList.add('active');
+const page = document.getElementById('page-'+n);
+
+if(page) page.classList.add('active');
 
 if(el)el.classList.add('active');
 
@@ -810,15 +953,25 @@ document.querySelectorAll('#page-billing .stab').forEach(t=>t.classList.remove('
 
 document.querySelectorAll('#page-billing .tp').forEach(t=>t.classList.remove('active'));
 
-document.getElementById('bt-'+n).classList.add('active');el.classList.add('active');
+const tab = document.getElementById('bt-'+n);
+
+if(tab) tab.classList.add('active');
+
+if(el) el.classList.add('active');
 
 if(n==='hist')renderHist();if(n==='ov')renderOv();
 
 };
 
-window.opM = function(id){document.getElementById(id).classList.add('open');};
+window.opM = function(id){
+  const modal = document.getElementById(id);
+  if(modal) modal.classList.add('open');
+};
 
-window.clsM = function(id){document.getElementById(id).classList.remove('open');};
+window.clsM = function(id){
+  const modal = document.getElementById(id);
+  if(modal) modal.classList.remove('open');
+};
 
 // ===== STUDENT MANAGEMENT =====
 
@@ -874,9 +1027,13 @@ await saveStudent(s);
 
 toast('Registered: '+s.name,'suc');
 
-document.getElementById('sForm').reset();
+const form = document.getElementById('sForm');
 
-document.getElementById('rj').valueAsDate=new Date();
+if(form) form.reset();
+
+const rj = document.getElementById('rj');
+
+if(rj) rj.valueAsDate=new Date();
 
 } catch (error) {
 
@@ -890,9 +1047,13 @@ hideLoader();
 
 window.clrForm = function(){
 
-document.getElementById('sForm').reset();
+const form = document.getElementById('sForm');
 
-document.getElementById('rj').valueAsDate=new Date();
+if(form) form.reset();
+
+const rj = document.getElementById('rj');
+
+if(rj) rj.valueAsDate=new Date();
 
 document.getElementById('rr').value='';
 
@@ -902,6 +1063,14 @@ function getAP(r){let t=0,p=0;for(let d in dbCache.attendance){t++;if(dbCache.at
 
 function renderDash(){
 
+const dStats = document.getElementById('dStats');
+
+const dAtt = document.getElementById('dAtt');
+
+const dBills = document.getElementById('dBills');
+
+if(!dStats || !dAtt || !dBills) return;
+
 const td=new Date().toISOString().split('T')[0],ta=dbCache.attendance[td]||{};
 
 const ss=dbCache.students.filter(s=>s.session===dbCache.cur),pr=ss.filter(s=>ta[s.rollNumber]).length;
@@ -910,37 +1079,45 @@ const m=new Date().getMonth()+1,y=new Date().getFullYear();
 
 const mb=dbCache.bills.filter(b=>b.month==m&&b.year==y&&b.paid),col=mb.reduce((a,b)=>a+(b.paidAmount||b.total),0);
 
-document.getElementById('dStats').innerHTML=`<div class="sbox"><div class="sic si-b">👥</div><div class="snum">${ss.length}</div><div class="slbl">Total Students</div></div><div class="sbox"><div class="sic si-g">✓</div><div class="snum">${pr}</div><div class="slbl">Present Today</div></div><div class="sbox"><div class="sic si-r">⚠</div><div class="snum">${ss.length-pr}</div><div class="slbl">Absent Today</div></div><div class="sbox"><div class="sic si-gold">💰</div><div class="snum">₹${col.toLocaleString('en-IN')}</div><div class="slbl">Collected This Month</div></div>`;
+dStats.innerHTML=`<div class="sbox"><div class="sic si-b">👥</div><div class="snum">${ss.length}</div><div class="slbl">Total Students</div></div><div class="sbox"><div class="sic si-g">✓</div><div class="snum">${pr}</div><div class="slbl">Present Today</div></div><div class="sbox"><div class="sic si-r">⚠</div><div class="snum">${ss.length-pr}</div><div class="slbl">Absent Today</div></div><div class="sbox"><div class="sic si-gold">💰</div><div class="snum">₹${col.toLocaleString('en-IN')}</div><div class="slbl">Collected This Month</div></div>`;
 
-const ae=document.getElementById('dAtt'),plist=ss.filter(s=>ta[s.rollNumber]).slice(0,5);
+const plist=ss.filter(s=>ta[s.rollNumber]).slice(0,5);
 
-ae.innerHTML=plist.length?plist.map(s=>`<div class="ac pres" style="margin-bottom:7px"><div class="an">${s.name}</div><div class="as">Class ${s.class} · ${s.rollNumber}</div><div class="at">🕐 ${ta[s.rollNumber].time}</div></div>`).join('')+(pr>5?`<p style="color:var(--text-light);font-size:.75rem;margin-top:6px">+${pr-5} more...</p>`:''):'<div class="empty" style="padding:16px 0"><div class="ei">📋</div><p>No attendance today</p></div>';
+dAtt.innerHTML=plist.length?plist.map(s=>`<div class="ac pres" style="margin-bottom:7px"><div class="an">${s.name}</div><div class="as">Class ${s.class} · ${s.rollNumber}</div><div class="at">🕐 ${ta[s.rollNumber].time}</div></div>`).join('')+(pr>5?`<p style="color:var(--text-light);font-size:.75rem;margin-top:6px">+${pr-5} more...</p>`:''):'<div class="empty" style="padding:16px 0"><div class="ei">📋</div><p>No attendance today</p></div>';
 
-const be=document.getElementById('dBills'),rb=[...dbCache.bills].sort((a,b)=>new Date(b.createdAt)-new Date(a.createdAt)).slice(0,5);
+const rb=[...dbCache.bills].sort((a,b)=>new Date(b.createdAt)-new Date(a.createdAt)).slice(0,5);
 
-be.innerHTML=rb.length?rb.map(b=>`<div style="display:flex;gap:10px;padding:8px;background:var(--cream);border-radius:7px;margin-bottom:5px"><div style="flex:1"><div style="font-size:.82rem;font-weight:600;color:var(--navy)">${b.studentName}</div><div style="font-size:.7rem;color:var(--text-light)">${MO[b.month]} ${b.year} · Class ${b.studentClass}</div></div><div style="font-family:'DM Mono',monospace;font-size:.82rem;font-weight:600;color:var(--navy)">₹${(b.paidAmount||b.total).toLocaleString('en-IN')}</div></div>`).join(''):'<div class="empty" style="padding:16px 0"><div class="ei">💳</div><p>No bills yet</p></div>';
+dBills.innerHTML=rb.length?rb.map(b=>`<div style="display:flex;gap:10px;padding:8px;background:var(--cream);border-radius:7px;margin-bottom:5px"><div style="flex:1"><div style="font-size:.82rem;font-weight:600;color:var(--navy)">${b.studentName}</div><div style="font-size:.7rem;color:var(--text-light)">${MO[b.month]} ${b.year} · Class ${b.studentClass}</div></div><div style="font-family:'DM Mono',monospace;font-size:.82rem;font-weight:600;color:var(--navy)">₹${(b.paidAmount||b.total).toLocaleString('en-IN')}</div></div>`).join(''):'<div class="empty" style="padding:16px 0"><div class="ei">💳</div><p>No bills yet</p></div>';
+
+console.log('📊 Dashboard rendered');
 
 }
 
 function renderStudents(){
 
+const scnt = document.getElementById('scnt');
+
+const sGrid = document.getElementById('sGrid');
+
+if(!scnt || !sGrid) return;
+
 const srch=(document.getElementById('srch')?.value||'').toLowerCase(),cls=document.getElementById('fCls')?.value||'',sess=document.getElementById('fSess')?.value||'';
 
 let list=dbCache.students.filter(s=>{if(cls&&s.class!==cls)return false;if(sess&&s.session!==sess)return false;if(srch&&!s.name.toLowerCase().includes(srch)&&!s.rollNumber.toLowerCase().includes(srch))return false;return true;});
 
-document.getElementById('scnt').textContent=list.length;
+scnt.textContent=list.length;
 
-const g=document.getElementById('sGrid');
+if(!list.length){sGrid.innerHTML='<div class="empty"><div class="ei">👤</div><h4>No students found</h4></div>';return;}
 
-if(!list.length){g.innerHTML='<div class="empty"><div class="ei">👤</div><h4>No students found</h4></div>';return;}
-
-g.innerHTML=list.map(s=>{
+sGrid.innerHTML=list.map(s=>{
 
 const ap=getAP(s.rollNumber),init=s.name.split(' ').map(w=>w[0]).join('').substring(0,2).toUpperCase(),pm=dbCache.bills.filter(b=>b.studentId===s.id).length;
 
 return`<div class="sc"><div class="av">${init}</div><div class="sm"><h3>${s.name} <span class="bdg bdg-c">Class ${s.class}</span> <span class="bdg bdg-s">${s.session}</span></h3><div class="sub"><span>📋 ${s.rollNumber}</span><span>👪 ${s.parentName}</span><span>📱 ${s.phoneNumber}</span></div><div style="margin-top:5px;display:flex;align-items:center;gap:9px"><div style="flex:1;background:#e9ecef;border-radius:20px;height:5px;max-width:140px"><div style="background:${ap>=75?'var(--success)':ap>=50?'var(--warning)':'var(--danger)'};width:${ap}%;height:5px;border-radius:20px"></div></div><span style="font-size:.7rem;color:var(--text-light)">${ap}% · ${pm} bills</span></div></div><div class="sa"><button class="btn btn-i btn-xs" onclick="showQR('${s.id}')">QR Code</button><button class="btn btn-g btn-xs" onclick="qkBill('${s.id}')">Bill</button><button class="btn btn-d btn-xs" onclick="delStu('${s.id}')">🗑</button></div></div>`;
 
 }).join('');
+
+console.log('👥 Students rendered:', list.length);
 
 }
 
@@ -1078,7 +1255,7 @@ list.forEach((s,i)=>{
 
 };
 
-// ===== ATTENDANCE WITH QR CODE SCANNING (FIXED FOR REAL-TIME) =====
+// ===== ATTENDANCE WITH QR CODE SCANNING (FULLY OPTIMIZED FOR MOBILE) =====
 
 window.markFromQR = async function(r){
 
@@ -1098,7 +1275,7 @@ return;
 
 const td=new Date().toISOString().split('T')[0];
 
-// Check if already marked
+// Check if already marked (use cache)
 
 if(dbCache.attendance[td] && dbCache.attendance[td][r]){
 
@@ -1111,6 +1288,8 @@ return;
 }
 
 const time=new Date().toLocaleTimeString('en-IN');
+
+showLoader();
 
 try {
 
@@ -1130,6 +1309,8 @@ toast('Error saving attendance','err');
 
 }
 
+hideLoader();
+
 };
 
 window.markAtt = async function(){
@@ -1139,6 +1320,8 @@ const r = document.getElementById('scanIn').value.trim();
 if(!r) return;
 
 const f = document.getElementById('sFeed');
+
+if(!f) return;
 
 f.style.display='flex';
 
@@ -1168,6 +1351,10 @@ if(dbCache.attendance[td] && dbCache.attendance[td][r]){
 
   
 
+  showLoader();
+
+  
+
   try {
 
     await saveAttendance(td, r, {name:s.name, class:s.class, time});
@@ -1182,7 +1369,15 @@ if(dbCache.attendance[td] && dbCache.attendance[td][r]){
 
     toast('Error saving','err');
 
+    f.className='sfeed err';
+
+    f.innerHTML='✗ Error saving attendance';
+
   }
+
+  
+
+  hideLoader();
 
 }
 
@@ -1196,13 +1391,25 @@ setTimeout(() => {f.style.display='none';}, 3500);
 
 function renderAttR(){
 
-const date=document.getElementById('aDate')?.value,cls=document.getElementById('aCls')?.value||'';if(!date)return;
+const aDate = document.getElementById('aDate');
+
+const aCls = document.getElementById('aCls');
+
+const aStats = document.getElementById('aStats');
+
+const aReport = document.getElementById('aReport');
+
+if(!aDate || !aStats || !aReport) return;
+
+const date=aDate.value,cls=aCls?.value||'';
+
+if(!date)return;
 
 const da=dbCache.attendance[date]||{};let ss=dbCache.students.filter(s=>s.session===dbCache.cur);if(cls)ss=ss.filter(s=>s.class===cls);
 
 const pr=ss.filter(s=>da[s.rollNumber]),ab=ss.filter(s=>!da[s.rollNumber]);
 
-document.getElementById('aStats').innerHTML=`<div class="sbox"><div class="sic si-b">👥</div><div class="snum">${ss.length}</div><div class="slbl">Total</div></div><div class="sbox"><div class="sic si-g">✓</div><div class="snum">${pr.length}</div><div class="slbl">Present</div></div><div class="sbox"><div class="sic si-r">✗</div><div class="snum">${ab.length}</div><div class="slbl">Absent</div></div><div class="sbox"><div class="sic si-gold">📊</div><div class="snum">${ss.length?Math.round(pr.length/ss.length*100):0}%</div><div class="slbl">Rate</div></div>`;
+aStats.innerHTML=`<div class="sbox"><div class="sic si-b">👥</div><div class="snum">${ss.length}</div><div class="slbl">Total</div></div><div class="sbox"><div class="sic si-g">✓</div><div class="snum">${pr.length}</div><div class="slbl">Present</div></div><div class="sbox"><div class="sic si-r">✗</div><div class="snum">${ab.length}</div><div class="slbl">Absent</div></div><div class="sbox"><div class="sic si-gold">📊</div><div class="snum">${ss.length?Math.round(pr.length/ss.length*100):0}%</div><div class="slbl">Rate</div></div>`;
 
 let h='<div class="sdiv">Present ('+pr.length+')</div><div class="agrid">';
 
@@ -1212,7 +1419,9 @@ h+='</div><div class="sdiv">Absent ('+ab.length+')</div><div class="agrid">';
 
 ab.forEach(s=>{h+=`<div class="ac abs"><div class="an">${s.name}</div><div class="as">Roll ${s.rollNumber} · Class ${s.class}</div><div class="as">📱 ${s.phoneNumber}</div></div>`;});
 
-h+='</div>';document.getElementById('aReport').innerHTML=h;
+h+='</div>';aReport.innerHTML=h;
+
+console.log('📋 Attendance rendered');
 
 }
 
@@ -1774,6 +1983,10 @@ toast('Reminder sent','suc');
 
 function renderHist(){
 
+const hList = document.getElementById('hList');
+
+if(!hList) return;
+
 const srch=(document.getElementById('hSrch')?.value||'').toLowerCase();
 
 const mo=parseInt(document.getElementById('hMo')?.value||'0');
@@ -1788,11 +2001,9 @@ if(cls)bills=bills.filter(b=>b.studentClass===cls);
 
 if(srch)bills=bills.filter(b=>b.studentName.toLowerCase().includes(srch)||b.rollNumber.toLowerCase().includes(srch));
 
-const c=document.getElementById('hList');
+if(!bills.length){hList.innerHTML='<div class="empty"><div class="ei">📂</div><h4>No bills found</h4></div>';return;}
 
-if(!bills.length){c.innerHTML='<div class="empty"><div class="ei">📂</div><h4>No bills found</h4></div>';return;}
-
-c.innerHTML=bills.map(b=>{
+hList.innerHTML=bills.map(b=>{
 
 const isPaid=b.paid&&b.paidAmount>=b.total;
 
@@ -1803,6 +2014,8 @@ const statusBadge=isPaid?'<span class="bdg bdg-paid">PAID</span>':isPartial?'<sp
 return`<div class="sc"><div class="av" style="background:linear-gradient(135deg,${isPaid?'var(--success)':isPartial?'var(--warning)':'var(--danger)'},#20c997)">₹</div><div class="sm"><h3>${b.studentName} <span class="bdg bdg-c">Class ${b.studentClass}</span> ${statusBadge}${b.autoGenerated?' <span class="bdg" style="background:rgba(52,152,219,.1);color:#3498db;font-size:.65rem">AUTO</span>':''}</h3><div class="sub"><span>📝 ${b.rollNumber}</span><span>📅 ${MO[b.month]} ${b.year}</span><span>👪 ${b.parentName}</span></div>${isPartial?`<div style="font-size:.75rem;color:var(--text-mid);margin-top:4px">Paid: ₹${b.paidAmount.toLocaleString('en-IN')} / ₹${b.total.toLocaleString('en-IN')}</div>`:''}</div><div style="text-align:right;flex-shrink:0"><div style="font-family:'Playfair Display',serif;font-size:1.2rem;font-weight:800;color:var(--navy)">₹${(b.paidAmount||b.total).toLocaleString('en-IN')}</div><div style="font-size:.72rem;color:var(--text-light)">${new Date(b.createdAt).toLocaleDateString('en-IN')}</div><button class="btn btn-i btn-xs" onclick="sendBillSMSById('${b.id}')" style="margin-top:4px">📱 SMS</button></div></div>`;
 
 }).join('');
+
+console.log('💰 Bills history rendered:', bills.length);
 
 }
 
@@ -1826,9 +2039,13 @@ window.noticeTypeChange = function(){
 
 const type=document.getElementById('noticeTo').value;
 
-document.getElementById('noticeClassSelect').style.display=type==='class'?'block':'none';
+const classSelect = document.getElementById('noticeClassSelect');
 
-document.getElementById('noticeStudentSelect').style.display=type==='select'?'block':'none';
+const studentSelect = document.getElementById('noticeStudentSelect');
+
+if(classSelect) classSelect.style.display=type==='class'?'block':'none';
+
+if(studentSelect) studentSelect.style.display=type==='select'?'block':'none';
 
 if(type==='select')loadStudentCheckList();
 
@@ -1838,7 +2055,11 @@ function loadStudentCheckList(){
 
 const list=dbCache.students.filter(s=>s.session===dbCache.cur);
 
-document.getElementById('studentCheckList').innerHTML=list.map(s=>`<div style="padding:5px;border-bottom:1px solid var(--border)"><label style="display:flex;align-items:center;cursor:pointer"><input type="checkbox" class="stu-check" value="${s.id}"><span style="font-size:.85rem">${s.name} (${s.rollNumber}) - Class ${s.class}</span></label></div>`).join('');
+const checkList = document.getElementById('studentCheckList');
+
+if(!checkList) return;
+
+checkList.innerHTML=list.map(s=>`<div style="padding:5px;border-bottom:1px solid var(--border)"><label style="display:flex;align-items:center;cursor:pointer"><input type="checkbox" class="stu-check" value="${s.id}"><span style="font-size:.85rem">${s.name} (${s.rollNumber}) - Class ${s.class}</span></label></div>`).join('');
 
 }
 
@@ -1924,13 +2145,15 @@ hideLoader();
 
 function renderNotices(){
 
+const noticeHistory = document.getElementById('noticeHistory');
+
+if(!noticeHistory) return;
+
 const list=[...dbCache.notices].sort((a,b)=>new Date(b.createdAt)-new Date(a.createdAt));
 
-const c=document.getElementById('noticeHistory');
+if(!list.length){noticeHistory.innerHTML='<div class="empty"><div class="ei">📢</div><h4>No notices yet</h4></div>';return;}
 
-if(!list.length){c.innerHTML='<div class="empty"><div class="ei">📢</div><h4>No notices yet</h4></div>';return;}
-
-c.innerHTML=list.map(n=>`<div class="notice-card">
+noticeHistory.innerHTML=list.map(n=>`<div class="notice-card">
 
 <h4>${n.title}</h4>
 
@@ -1940,15 +2163,21 @@ c.innerHTML=list.map(n=>`<div class="notice-card">
 
   </div>`).join('');
 
+console.log('📢 Notices rendered:', list.length);
+
 }
 
 // ===== REPORTS =====
 
 function renderRpt(){
 
+const rCnt = document.getElementById('rCnt');
+
+if(!rCnt) return;
+
 const date=document.getElementById('rDate')?.value,cls=document.getElementById('rCls')?.value||'';
 
-if(!date){document.getElementById('rCnt').innerHTML='<div class="empty"><div class="ei">📊</div><p>Select a date</p></div>';return;}
+if(!date){rCnt.innerHTML='<div class="empty"><div class="ei">📊</div><p>Select a date</p></div>';return;}
 
 const da=dbCache.attendance[date]||{};let ss=dbCache.students.filter(s=>s.session===dbCache.cur);if(cls)ss=ss.filter(s=>s.class===cls);
 
@@ -1962,7 +2191,9 @@ h+='</div><div class="sdiv">Absent ('+ab.length+')</div><div class="agrid">';
 
 ab.forEach(s=>{h+=`<div class="ac abs"><div class="an">${s.name}</div><div class="as">Roll ${s.rollNumber} · Class ${s.class}</div></div>`;});
 
-h+='</div>';document.getElementById('rCnt').innerHTML=h;
+h+='</div>';rCnt.innerHTML=h;
+
+console.log('📊 Report rendered');
 
 }
 
@@ -1998,7 +2229,9 @@ document.getElementById('newSessName').value='';
 
 clsM('newSessionM');
 
-document.getElementById('sessTag').textContent='Session '+dbCache.cur;
+const sessTag = document.getElementById('sessTag');
+
+if(sessTag) sessTag.textContent='Session '+dbCache.cur;
 
 toast('Session created: '+name,'suc');
 
@@ -2016,6 +2249,10 @@ hideLoader();
 
 function renderSess(){
 
+const sessList = document.getElementById('sessList');
+
+if(!sessList) return;
+
 const all=[...new Set([dbCache.cur,...dbCache.sessions,...dbCache.students.map(s=>s.session).filter(Boolean)])].sort().reverse();
 
 let h='<div style="background:linear-gradient(135deg,var(--navy),var(--royal));border-radius:12px;padding:18px 22px;color:#fff;margin-bottom:20px"><h3 style="font-family:\'Playfair Display\',serif;font-size:1rem;font-weight:800">Active: Session '+dbCache.cur+'</h3><p style="font-size:.8rem;color:rgba(255,255,255,.7);margin-top:2px">All new registrations go here</p></div><div class="sgrid">';
@@ -2028,7 +2265,9 @@ h+=`<div class="card"><div style="display:flex;align-items:center;justify-conten
 
 });
 
-h+='</div>';document.getElementById('sessList').innerHTML=h;
+h+='</div>';sessList.innerHTML=h;
+
+console.log('📁 Sessions rendered');
 
 }
 
