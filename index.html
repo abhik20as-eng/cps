@@ -660,7 +660,9 @@ function setupRealtimeListeners() {
       const currentPage = document.querySelector('.page.active')?.id;
       if (currentPage === 'page-billing') {
         renderHist();
-        renderOv();
+        if (document.getElementById('bt-ov').classList.contains('active')) {
+          renderOv();
+        }
       }
       if (currentPage === 'page-dashboard') renderDash();
     },
@@ -1024,8 +1026,10 @@ window.generateQRDownload = function(){
 
 // ===== ATTENDANCE WITH CLASS FILTER FIRST =====
 window.updateAttendanceClassFilter = function(){
-  const cls = document.getElementById('scanCls').value;
+  const cls = document.getElementById('scanCls')?.value;
   const input = document.getElementById('scanIn');
+  
+  if(!input) return;
   
   if(!cls) {
     input.disabled = true;
@@ -1067,8 +1071,8 @@ window.markFromQR = async function(r){
 };
 
 window.markAtt = async function(){
-  const cls = document.getElementById('scanCls').value;
-  const r = document.getElementById('scanIn').value.trim();
+  const cls = document.getElementById('scanCls')?.value;
+  const r = document.getElementById('scanIn')?.value.trim();
   
   if(!cls) {
     toast('Please select class first', 'err');
@@ -1078,36 +1082,43 @@ window.markAtt = async function(){
   if(!r) return;
   
   const f = document.getElementById('sFeed');
-  f.style.display='flex';
+  if(f) f.style.display='flex';
   
   // Find student in selected class
   const s = dbCache.students.find(s => s.rollNumber === r && s.class === cls);
   
   if(!s){
-    f.className='sfeed err';
-    f.innerHTML='✗ Student not found in Class ' + cls + ': <b>' + r + '</b>';
+    if(f) {
+      f.className='sfeed err';
+      f.innerHTML='✗ Student not found in Class ' + cls + ': <b>' + r + '</b>';
+    }
   } else {
     const td = new Date().toISOString().split('T')[0];
     if(!dbCache.attendance[td]) dbCache.attendance[td] = {};
     
     if(dbCache.attendance[td][r]){
-      f.className='sfeed wrn';
-      f.innerHTML='⚠ Already marked — <b>' + s.name + '</b> at ' + dbCache.attendance[td][r].time;
+      if(f) {
+        f.className='sfeed wrn';
+        f.innerHTML='⚠ Already marked — <b>' + s.name + '</b> at ' + dbCache.attendance[td][r].time;
+      }
     } else {
       const time = new Date().toLocaleTimeString('en-IN');
       
       try {
         await saveAttendance(td, r, {name:s.name, class:s.class, time});
-        f.className='sfeed suc';
-        f.innerHTML='✓ <b>' + s.name + '</b> · Class ' + s.class + ' · 🕐 ' + time;
+        if(f) {
+          f.className='sfeed suc';
+          f.innerHTML='✓ <b>' + s.name + '</b> · Class ' + s.class + ' · 🕐 ' + time;
+        }
       } catch (error) {
         toast('Error saving','err');
       }
     }
   }
   
-  document.getElementById('scanIn').value='';
-  setTimeout(() => {f.style.display='none';}, 3500);
+  const input = document.getElementById('scanIn');
+  if(input) input.value='';
+  if(f) setTimeout(() => {f.style.display='none';}, 3500);
 };
 
 function renderAttR(){
@@ -1327,7 +1338,9 @@ window.renderOv = function(){
   paid.forEach(s=>{h+=`<div style="background:#fff;border-radius:9px;border:1px solid var(--border);padding:12px;display:flex;gap:12px;align-items:center"><div style="flex:1"><div style="font-weight:700;font-size:.88rem;color:var(--navy)">${s.name} <span class="bdg bdg-c">Class ${s.class}</span></div><div style="font-size:.75rem;color:var(--text-light);margin-top:2px">Roll: ${s.rollNumber}</div></div><div style="color:var(--success);font-weight:700">PAID</div></div>`;});
   h+='</div><div class="sdiv">Unpaid ('+upd.length+')</div><div class="sgrid">';
   upd.forEach(s=>{h+=`<div style="background:#fff;border-radius:9px;border:1px solid var(--border);padding:12px;display:flex;gap:12px;align-items:center"><div style="flex:1"><div style="font-weight:700;font-size:.88rem;color:var(--navy)">${s.name} <span class="bdg bdg-c">Class ${s.class}</span></div><div style="font-size:.75rem;color:var(--text-light);margin-top:2px">Roll: ${s.rollNumber} · 📱 ${s.phoneNumber}</div></div><div style="display:flex;gap:4px"><button class="btn btn-g btn-xs" onclick="qkBill('${s.id}')">Bill</button><button class="btn btn-i btn-xs" onclick="sendDueSMS('${s.id}',${mo},${yr})">📱</button></div></div>`;});
-  h+='</div>';document.getElementById('ovList').innerHTML=h;
+  h+='</div>';
+  const ovList = document.getElementById('ovList');
+  if(ovList) ovList.innerHTML=h;
 };
 
 window.sendDueSMS = function(sid,mo,yr){
@@ -1449,7 +1462,7 @@ function renderRpt(){
   h+='</div>';document.getElementById('rCnt').innerHTML=h;
 }
 
-// ===== SESSIONS =====
+// ===== SESSIONS (FIXED ERROR) =====
 window.showNewSession = function(){
   opM('newSessionM');
 };
@@ -1481,11 +1494,43 @@ window.createNewSession = async function(){
 function renderSess(){
   const all=[...new Set([dbCache.cur,...dbCache.sessions,...dbCache.students.map(s=>s.session).filter(Boolean)])].sort().reverse();
   let h='<div style="background:linear-gradient(135deg,var(--navy),var(--royal));border-radius:12px;padding:18px 22px;color:#fff;margin-bottom:20px"><h3 style="font-family:\'Playfair Display\',serif;font-size:1rem;font-weight:800">Active: Session '+dbCache.cur+'</h3><p style="font-size:.8rem;color:rgba(255,255,255,.7);margin-top:2px">All new registrations go here</p></div><div class="sgrid">';
+  
   all.forEach(sess=>{
-    const ss=dbCache.students.filter(s=>s.session===sess),bs=dbCache.bills.filter(b=>b.session===sess&&b.paid),col=bs.reduce((a,b)=>a+(b.paidAmount||b.total),0);
-    h+=`<div class="card"><div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px"><div><div style="font-family:'Playfair Display',serif;font-size:1.15rem;font-weight:800;color:var(--navy)">Session ${sess}</div>${sess===dbCache.cur?'<span class="bdg" style="background:rgba(45,155,90,.12);color:var(--success);margin-top:3px">● Active</span>':'<span class="bdg" style="background:var(--cream);color:var(--text-mid);border:1px solid var(--border);margin-top:3px">Archived</span>'}</div><div style="text-align:right"><div style="font-size:.72rem;color:var(--text-light)">Collected</div><div style="font-family:'Playfair Display',serif;font-size:1.05rem;font-weight:800;color:var(--navy)">₹${col.toLocaleString('en-IN')}</div></div></div><div style="display:flex;gap:20px">${[[ss.length,'Students'],[bs.length,'Bills'],[...new Set(ss.map(s=>s.class))].length,'Classes'].map(([v,l])=>`<div><div style="font-size:1.4rem;font-weight:800;color:var(--navy)">${v}</div><div style="font-size:.72rem;color:var(--text-light)">${l}</div></div>`).join('')}</div></div>`;
+    const ss=dbCache.students.filter(s=>s.session===sess);
+    const bs=dbCache.bills.filter(b=>b.session===sess&&b.paid);
+    const col=bs.reduce((a,b)=>a+(b.paidAmount||b.total),0);
+    const uniqueClasses=[...new Set(ss.map(s=>s.class))].length;
+    
+    h+=`<div class="card">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+        <div>
+          <div style="font-family:'Playfair Display',serif;font-size:1.15rem;font-weight:800;color:var(--navy)">Session ${sess}</div>
+          ${sess===dbCache.cur?'<span class="bdg" style="background:rgba(45,155,90,.12);color:var(--success);margin-top:3px">● Active</span>':'<span class="bdg" style="background:var(--cream);color:var(--text-mid);border:1px solid var(--border);margin-top:3px">Archived</span>'}
+        </div>
+        <div style="text-align:right">
+          <div style="font-size:.72rem;color:var(--text-light)">Collected</div>
+          <div style="font-family:'Playfair Display',serif;font-size:1.05rem;font-weight:800;color:var(--navy)">₹${col.toLocaleString('en-IN')}</div>
+        </div>
+      </div>
+      <div style="display:flex;gap:20px">
+        <div>
+          <div style="font-size:1.4rem;font-weight:800;color:var(--navy)">${ss.length}</div>
+          <div style="font-size:.72rem;color:var(--text-light)">Students</div>
+        </div>
+        <div>
+          <div style="font-size:1.4rem;font-weight:800;color:var(--navy)">${bs.length}</div>
+          <div style="font-size:.72rem;color:var(--text-light)">Bills</div>
+        </div>
+        <div>
+          <div style="font-size:1.4rem;font-weight:800;color:var(--navy)">${uniqueClasses}</div>
+          <div style="font-size:.72rem;color:var(--text-light)">Classes</div>
+        </div>
+      </div>
+    </div>`;
   });
-  h+='</div>';document.getElementById('sessList').innerHTML=h;
+  
+  h+='</div>';
+  document.getElementById('sessList').innerHTML=h;
 }
 
 // Start loader
