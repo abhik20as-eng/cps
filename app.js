@@ -1355,7 +1355,9 @@ if (existing && existing.paidAmount > 0 && !isFullyPaid) {
 
 const unpaidTotal=cb.unpaidBills.reduce((a,b)=>a+(b.total-(b.paidAmount||0)),0);
 
-const grandTotal=curTotal+unpaidTotal;
+// Grand total = current month REMAINING (after previous payment) + unpaid bills
+const currentMonthRemaining = curTotal - currentMonthPreviousPayment;
+const grandTotal = currentMonthRemaining + unpaidTotal;
 
 // Get current deposit value if exists (to preserve user input during re-render)
 let currentDeposit = grandTotal;
