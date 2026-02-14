@@ -1176,7 +1176,31 @@ if(!id){document.getElementById('bPrevW').style.display='none';return;}
 
 const s=dbCache.students.find(s=>s.id===id);if(!s)return;
 
-cb.student=s;cb.items=[{name:'Monthly Fee',price:s.monthlyFee}];
+const mo=parseInt(document.getElementById('bMo').value);
+
+const yr=parseInt(document.getElementById('bYr').value);
+
+// Check if bill already exists for this month/year
+
+const existingBill = dbCache.bills.find(b=>b.studentId===id && b.month===mo && b.year===yr);
+
+cb.student=s;
+
+// Load items from existing bill OR default to monthly fee
+
+if(existingBill && existingBill.items && existingBill.items.length > 0) {
+
+  cb.items = [...existingBill.items]; // Load saved items
+
+  console.log('Loaded existing bill items:', cb.items);
+
+} else {
+
+  cb.items = [{name:'Monthly Fee',price:s.monthlyFee}]; // Default
+
+  console.log('Using default monthly fee');
+
+}
 
 console.log('Loading bill for student:', s.name);
 console.log('Current bills in cache:', dbCache.bills.filter(b=>b.studentId===id).length);
@@ -1197,6 +1221,13 @@ if (isStudentAdmitted(id)) {
     dbCache.bills = billsSnap.docs.map(doc => ({id: doc.id, ...doc.data()}));
     console.log('Reloaded bills from database. Total bills:', dbCache.bills.length);
     console.log('Bills for this student:', dbCache.bills.filter(b=>b.studentId===id).length);
+    
+    // Re-check for existing bill after reload and update items
+    const reloadedBill = dbCache.bills.find(b=>b.studentId===id && b.month===mo && b.year===yr);
+    if(reloadedBill && reloadedBill.items && reloadedBill.items.length > 0) {
+      cb.items = [...reloadedBill.items];
+      console.log('Reloaded bill items after DB refresh:', cb.items);
+    }
   } catch (error) {
     console.error('Error reloading bills:', error);
   }
@@ -1355,9 +1386,8 @@ if (existing && existing.paidAmount > 0 && !isFullyPaid) {
 
 const unpaidTotal=cb.unpaidBills.reduce((a,b)=>a+(b.total-(b.paidAmount||0)),0);
 
-// Grand total = current month REMAINING (after previous payment) + unpaid bills
-const currentMonthRemaining = curTotal - currentMonthPreviousPayment;
-const grandTotal = currentMonthRemaining + unpaidTotal;
+// Grand total = FULL current month total + unpaid bills from previous months
+const grandTotal = curTotal + unpaidTotal;
 
 // Get current deposit value if exists (to preserve user input during re-render)
 let currentDeposit = grandTotal;
