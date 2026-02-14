@@ -54,23 +54,11 @@ let currentUser = null;
 
 let unsubscribers = [];
 
-let isInitialLoad = true;
-
-let renderQueue = new Set();
-
-let renderTimeout = null;
-
 // ===== HELPER FUNCTIONS =====
 
-function showLoader(){
-  const loader = document.getElementById('loader');
-  if(loader) loader.classList.add('show');
-}
+function showLoader(){document.getElementById('loader').classList.add('show');}
 
-function hideLoader(){
-  const loader = document.getElementById('loader');
-  if(loader) loader.classList.remove('show');
-}
+function hideLoader(){document.getElementById('loader').classList.remove('show');}
 
 window.toast = function(msg,type='inf',dur=3000){
 
@@ -84,45 +72,6 @@ w.appendChild(t);setTimeout(()=>t.remove(),dur);
 
 };
 
-// ===== SMART RENDERING QUEUE (PREVENTS MULTIPLE RENDERS) =====
-
-function queueRender(renderFunc) {
-  renderQueue.add(renderFunc);
-  
-  if (renderTimeout) {
-    clearTimeout(renderTimeout);
-  }
-  
-  renderTimeout = setTimeout(() => {
-    renderQueue.forEach(func => {
-      try {
-        func();
-      } catch (error) {
-        console.error('Render error:', error);
-      }
-    });
-    renderQueue.clear();
-  }, 100); // Batch renders within 100ms
-}
-
-// ===== QR ATTENDANCE CHECKING =====
-
-function checkQRAttendance() {
-
-const params = new URLSearchParams(window.location.search);
-
-const roll = params.get('attendance');
-
-if (roll && auth.currentUser) {
-
-console.log('📲 QR attendance detected for roll:', roll);
-
-markFromQR(roll);
-
-}
-
-}
-
 // ===== AUTHENTICATION =====
 
 onAuthStateChanged(auth, async (user) => {
@@ -131,9 +80,7 @@ if (user) {
 
 currentUser = user;
 
-const emailEl = document.getElementById('userEmail');
-
-if(emailEl) emailEl.textContent = user.email;
+document.getElementById('userEmail').textContent = user.email;
 
 await loadAllData();
 
@@ -141,22 +88,15 @@ setupRealtimeListeners();
 
 showApp();
 
-// Check for QR attendance AFTER login
-setTimeout(() => checkQRAttendance(), 300);
-
 } else {
 
 currentUser = null;
 
 stopRealtimeListeners();
 
-const mainApp = document.getElementById('mainApp');
+document.getElementById('mainApp').style.display='none';
 
-const loginPage = document.getElementById('loginPage');
-
-if(mainApp) mainApp.style.display='none';
-
-if(loginPage) loginPage.style.display='flex';
+document.getElementById('loginPage').style.display='flex';
 
 }
 
@@ -230,9 +170,7 @@ try {
 
 await signOut(auth);
 
-const form = document.getElementById('loginForm');
-
-if(form) form.reset();
+document.getElementById('loginForm').reset();
 
 toast('Logged out','inf');
 
@@ -300,7 +238,7 @@ hideLoader();
 
 };
 
-// ===== REALTIME LISTENERS (FULLY OPTIMIZED FOR MOBILE) =====
+// ===== REALTIME LISTENERS (FIXED FOR MULTI-DEVICE) =====
 
 function setupRealtimeListeners() {
 
@@ -308,77 +246,41 @@ if (!auth.currentUser) return;
 
 const uid = auth.currentUser.uid;
 
-console.log('🔥 Setting up real-time listeners for user:', uid);
+// Students listener
 
-// Students listener - OPTIMIZED
 const studentsUnsubscribe = onSnapshot(
 
 collection(db, 'users', uid, 'students'),
 
-{ includeMetadataChanges: false }, // Only get server changes
-
 (snapshot) => {
-
-  console.log('📚 Students update:', snapshot.docs.length, 'documents');
-
-  
-
-  // Update cache immediately
 
   dbCache.students = snapshot.docs.map(doc => ({id: doc.id, ...doc.data()}));
 
-  
-
-  // Queue renders instead of immediate render
-
   const currentPage = document.querySelector('.page.active')?.id;
 
-  if (currentPage === 'page-students') {
+  if (currentPage === 'page-students') renderStudents();
 
-    queueRender(renderStudents);
-
-  }
-
-  if (currentPage === 'page-dashboard') {
-
-    queueRender(renderDash);
-
-  }
+  if (currentPage === 'page-dashboard') renderDash();
 
 },
 
-(error) => {
-
-  console.error('❌ Students listener error:', error);
-
-  toast('Sync error: Students', 'err', 2000);
-
-}
+(error) => console.error('Students listener error:', error)
 
 );
 
-// Attendance listener - CRITICAL FOR MOBILE SYNC
+// Attendance listener
+
 const attendanceUnsubscribe = onSnapshot(
 
 collection(db, 'users', uid, 'attendance'),
 
-{ includeMetadataChanges: false },
-
 (snapshot) => {
 
-  console.log('📋 Attendance update:', snapshot.docs.length, 'date documents');
-
-  
-
-  // Store previous state for comparison
-
-  const previousAttendance = JSON.parse(JSON.stringify(dbCache.attendance));
-
-  
-
-  // Update cache
+  const oldAttendance = {...dbCache.attendance};
 
   dbCache.attendance = {};
+
+  
 
   snapshot.docs.forEach(doc => {
 
@@ -388,181 +290,109 @@ collection(db, 'users', uid, 'attendance'),
 
   
 
-  // Detect NEW attendance entries (skip on initial load)
+  // Check for new attendance entries
 
-  if (!isInitialLoad) {
+  const today = new Date().toISOString().split('T')[0];
 
-    const today = new Date().toISOString().split('T')[0];
+  const todayOld = oldAttendance[today] || {};
 
-    const todayOld = previousAttendance[today] || {};
-
-    const todayNew = dbCache.attendance[today] || {};
-
-    
-
-    // Find newly added students
-
-    Object.keys(todayNew).forEach(roll => {
-
-      if (!todayOld[roll] && todayNew[roll]) {
-
-        const studentData = todayNew[roll];
-
-        console.log('✅ New attendance detected:', studentData.name);
-
-        toast(`✓ ${studentData.name} marked present at ${studentData.time}`, 'suc', 4000);
-
-      }
-
-    });
-
-  }
+  const todayNew = dbCache.attendance[today] || {};
 
   
 
-  // Queue UI updates
+  const oldKeys = Object.keys(todayOld);
+
+  const newKeys = Object.keys(todayNew);
+
+  
+
+  // Find new entries
+
+  newKeys.forEach(roll => {
+
+    if (!oldKeys.includes(roll) && todayNew[roll]) {
+
+      const studentData = todayNew[roll];
+
+      toast(`✓ ${studentData.name} marked present at ${studentData.time}`, 'suc', 4000);
+
+    }
+
+  });
+
+  
 
   const currentPage = document.querySelector('.page.active')?.id;
 
-  if (currentPage === 'page-dashboard') {
+  if (currentPage === 'page-dashboard') renderDash();
 
-    queueRender(renderDash);
+  if (currentPage === 'page-attendance') renderAttR();
 
-  }
-
-  if (currentPage === 'page-attendance') {
-
-    queueRender(renderAttR);
-
-  }
-
-  if (currentPage === 'page-reports') {
-
-    queueRender(renderRpt);
-
-  }
+  if (currentPage === 'page-reports') renderRpt();
 
 },
 
-(error) => {
-
-  console.error('❌ Attendance listener error:', error);
-
-  toast('Sync error: Attendance', 'err', 2000);
-
-}
+(error) => console.error('Attendance listener error:', error)
 
 );
 
-// Bills listener - OPTIMIZED
+// Bills listener
+
 const billsUnsubscribe = onSnapshot(
 
 collection(db, 'users', uid, 'bills'),
 
-{ includeMetadataChanges: false },
-
 (snapshot) => {
 
-  console.log('💰 Bills update:', snapshot.docs.length, 'documents');
-
-  
-
   dbCache.bills = snapshot.docs.map(doc => ({id: doc.id, ...doc.data()}));
-
-  
 
   const currentPage = document.querySelector('.page.active')?.id;
 
   if (currentPage === 'page-billing') {
 
-    queueRender(() => {
+    renderHist();
 
-      renderHist();
-
-      renderOv();
-
-    });
+    renderOv();
 
   }
 
-  if (currentPage === 'page-dashboard') {
-
-    queueRender(renderDash);
-
-  }
+  if (currentPage === 'page-dashboard') renderDash();
 
 },
 
-(error) => {
-
-  console.error('❌ Bills listener error:', error);
-
-  toast('Sync error: Bills', 'err', 2000);
-
-}
+(error) => console.error('Bills listener error:', error)
 
 );
 
 // Notices listener
+
 const noticesUnsubscribe = onSnapshot(
 
 collection(db, 'users', uid, 'notices'),
 
-{ includeMetadataChanges: false },
-
 (snapshot) => {
-
-  console.log('📢 Notices update:', snapshot.docs.length, 'documents');
 
   dbCache.notices = snapshot.docs.map(doc => ({id: doc.id, ...doc.data()}));
 
-  
-
   const currentPage = document.querySelector('.page.active')?.id;
 
-  if (currentPage === 'page-notices') {
-
-    queueRender(renderNotices);
-
-  }
+  if (currentPage === 'page-notices') renderNotices();
 
 },
 
-(error) => {
-
-  console.error('❌ Notices listener error:', error);
-
-  toast('Sync error: Notices', 'err', 2000);
-
-}
+(error) => console.error('Notices listener error:', error)
 
 );
 
 unsubscribers = [studentsUnsubscribe, attendanceUnsubscribe, billsUnsubscribe, noticesUnsubscribe];
 
-console.log('✅ All real-time listeners active');
-
-// Mark initial load complete after 2 seconds
-
-setTimeout(() => {
-
-isInitialLoad = false;
-
-console.log('🎯 Initial load complete - real-time notifications enabled');
-
-}, 2000);
-
 }
 
 function stopRealtimeListeners() {
 
-console.log('🛑 Stopping real-time listeners');
-
 unsubscribers.forEach(unsub => unsub());
 
 unsubscribers = [];
-
-isInitialLoad = true;
 
 }
 
@@ -630,20 +460,6 @@ const noticesSnap = await getDocs(collection(db, 'users', uid, 'notices'));
 
 dbCache.notices = noticesSnap.docs.map(doc => ({id: doc.id, ...doc.data()}));
 
-
-
-console.log('📦 Data loaded:', {
-
-  students: dbCache.students.length,
-
-  attendance: Object.keys(dbCache.attendance).length,
-
-  bills: dbCache.bills.length,
-
-  notices: dbCache.notices.length
-
-});
-
 } catch (error) {
 
 console.error('Error loading data:', error);
@@ -672,8 +488,6 @@ await setDoc(doc(db, 'settings', auth.currentUser.uid), {
 
 });
 
-console.log('✅ Settings saved');
-
 } catch (error) {
 
 console.error('Error saving settings:', error);
@@ -696,8 +510,6 @@ if (student.id) {
 
   await setDoc(doc(db, 'users', uid, 'students', id), data);
 
-  console.log('✅ Student updated:', data.name);
-
 } else {
 
   const {id, ...data} = student;
@@ -705,8 +517,6 @@ if (student.id) {
   const docRef = await addDoc(collection(db, 'users', uid, 'students'), data);
 
   student.id = docRef.id;
-
-  console.log('✅ Student created:', data.name);
 
 }
 
@@ -732,8 +542,6 @@ const ref = doc(db, 'users', auth.currentUser.uid, 'attendance', date);
 
 await setDoc(ref, { [rollNumber]: data }, { merge: true });
 
-console.log('✅ Attendance saved:', date, rollNumber, data.name);
-
 } catch (error) {
 
 console.error('Error saving attendance:', error);
@@ -758,8 +566,6 @@ if (bill.id) {
 
   await setDoc(doc(db, 'users', uid, 'bills', id), data);
 
-  console.log('✅ Bill updated:', data.studentName);
-
 } else {
 
   const {id, ...data} = bill;
@@ -767,8 +573,6 @@ if (bill.id) {
   const docRef = await addDoc(collection(db, 'users', uid, 'bills'), data);
 
   bill.id = docRef.id;
-
-  console.log('✅ Bill created:', data.studentName);
 
 }
 
@@ -796,8 +600,6 @@ const docRef = await addDoc(collection(db, 'users', auth.currentUser.uid, 'notic
 
 notice.id = docRef.id;
 
-console.log('✅ Notice created:', data.title);
-
 return notice;
 
 } catch (error) {
@@ -812,6 +614,7 @@ throw error;
 
 // ===== HELPER FUNCTION TO CHECK IF STUDENT IS ADMITTED =====
 function isStudentAdmitted(studentId) {
+  // Student is considered admitted if they have at least one paid bill
   return dbCache.bills.some(b => b.studentId === studentId && b.paid && b.paidAmount > 0);
 }
 
@@ -827,13 +630,9 @@ function getUnpaidBillsForStudent(studentId) {
 
 function showApp(){
 
-const loginPage = document.getElementById('loginPage');
+document.getElementById('loginPage').style.display='none';
 
-const mainApp = document.getElementById('mainApp');
-
-if(loginPage) loginPage.style.display='none';
-
-if(mainApp) mainApp.style.display='block';
+document.getElementById('mainApp').style.display='block';
 
 init();
 
@@ -875,25 +674,17 @@ document.getElementById('rr').value='';
 
 function init(){
 
-const rj = document.getElementById('rj');
+document.getElementById('rj').valueAsDate=new Date();
 
-const aDate = document.getElementById('aDate');
+document.getElementById('aDate').valueAsDate=new Date();
 
-const rDate = document.getElementById('rDate');
-
-if(rj) rj.valueAsDate=new Date();
-
-if(aDate) aDate.valueAsDate=new Date();
-
-if(rDate) rDate.valueAsDate=new Date();
+document.getElementById('rDate').valueAsDate=new Date();
 
 const m=new Date().getMonth()+1;
 
 ['bMo','ovMo'].forEach(id=>{const e=document.getElementById(id);if(e)e.value=m;});
 
-const sessTag = document.getElementById('sessTag');
-
-if(sessTag) sessTag.textContent='Session '+dbCache.cur;
+document.getElementById('sessTag').textContent='Session '+dbCache.cur;
 
 populateFSess();
 
@@ -907,13 +698,23 @@ renderSess();
 
 renderNotices();
 
+// Check for QR attendance
+
+setTimeout(() => {
+
+const p=new URLSearchParams(window.location.search);
+
+const r=p.get('attendance');
+
+if(r) markFromQR(r);
+
+}, 500);
+
 }
 
 function populateFSess(){
 
 const s=document.getElementById('fSess');
-
-if(!s) return;
 
 s.innerHTML='<option value="">All Sessions</option>';
 
@@ -927,9 +728,7 @@ document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
 
 document.querySelectorAll('.ni').forEach(x=>x.classList.remove('active'));
 
-const page = document.getElementById('page-'+n);
-
-if(page) page.classList.add('active');
+document.getElementById('page-'+n).classList.add('active');
 
 if(el)el.classList.add('active');
 
@@ -953,25 +752,15 @@ document.querySelectorAll('#page-billing .stab').forEach(t=>t.classList.remove('
 
 document.querySelectorAll('#page-billing .tp').forEach(t=>t.classList.remove('active'));
 
-const tab = document.getElementById('bt-'+n);
-
-if(tab) tab.classList.add('active');
-
-if(el) el.classList.add('active');
+document.getElementById('bt-'+n).classList.add('active');el.classList.add('active');
 
 if(n==='hist')renderHist();if(n==='ov')renderOv();
 
 };
 
-window.opM = function(id){
-  const modal = document.getElementById(id);
-  if(modal) modal.classList.add('open');
-};
+window.opM = function(id){document.getElementById(id).classList.add('open');};
 
-window.clsM = function(id){
-  const modal = document.getElementById(id);
-  if(modal) modal.classList.remove('open');
-};
+window.clsM = function(id){document.getElementById(id).classList.remove('open');};
 
 // ===== STUDENT MANAGEMENT =====
 
@@ -1027,13 +816,9 @@ await saveStudent(s);
 
 toast('Registered: '+s.name,'suc');
 
-const form = document.getElementById('sForm');
+document.getElementById('sForm').reset();
 
-if(form) form.reset();
-
-const rj = document.getElementById('rj');
-
-if(rj) rj.valueAsDate=new Date();
+document.getElementById('rj').valueAsDate=new Date();
 
 } catch (error) {
 
@@ -1047,13 +832,9 @@ hideLoader();
 
 window.clrForm = function(){
 
-const form = document.getElementById('sForm');
+document.getElementById('sForm').reset();
 
-if(form) form.reset();
-
-const rj = document.getElementById('rj');
-
-if(rj) rj.valueAsDate=new Date();
+document.getElementById('rj').valueAsDate=new Date();
 
 document.getElementById('rr').value='';
 
@@ -1063,14 +844,6 @@ function getAP(r){let t=0,p=0;for(let d in dbCache.attendance){t++;if(dbCache.at
 
 function renderDash(){
 
-const dStats = document.getElementById('dStats');
-
-const dAtt = document.getElementById('dAtt');
-
-const dBills = document.getElementById('dBills');
-
-if(!dStats || !dAtt || !dBills) return;
-
 const td=new Date().toISOString().split('T')[0],ta=dbCache.attendance[td]||{};
 
 const ss=dbCache.students.filter(s=>s.session===dbCache.cur),pr=ss.filter(s=>ta[s.rollNumber]).length;
@@ -1079,45 +852,37 @@ const m=new Date().getMonth()+1,y=new Date().getFullYear();
 
 const mb=dbCache.bills.filter(b=>b.month==m&&b.year==y&&b.paid),col=mb.reduce((a,b)=>a+(b.paidAmount||b.total),0);
 
-dStats.innerHTML=`<div class="sbox"><div class="sic si-b">👥</div><div class="snum">${ss.length}</div><div class="slbl">Total Students</div></div><div class="sbox"><div class="sic si-g">✓</div><div class="snum">${pr}</div><div class="slbl">Present Today</div></div><div class="sbox"><div class="sic si-r">⚠</div><div class="snum">${ss.length-pr}</div><div class="slbl">Absent Today</div></div><div class="sbox"><div class="sic si-gold">💰</div><div class="snum">₹${col.toLocaleString('en-IN')}</div><div class="slbl">Collected This Month</div></div>`;
+document.getElementById('dStats').innerHTML=`<div class="sbox"><div class="sic si-b">👥</div><div class="snum">${ss.length}</div><div class="slbl">Total Students</div></div><div class="sbox"><div class="sic si-g">✓</div><div class="snum">${pr}</div><div class="slbl">Present Today</div></div><div class="sbox"><div class="sic si-r">⚠</div><div class="snum">${ss.length-pr}</div><div class="slbl">Absent Today</div></div><div class="sbox"><div class="sic si-gold">💰</div><div class="snum">₹${col.toLocaleString('en-IN')}</div><div class="slbl">Collected This Month</div></div>`;
 
-const plist=ss.filter(s=>ta[s.rollNumber]).slice(0,5);
+const ae=document.getElementById('dAtt'),plist=ss.filter(s=>ta[s.rollNumber]).slice(0,5);
 
-dAtt.innerHTML=plist.length?plist.map(s=>`<div class="ac pres" style="margin-bottom:7px"><div class="an">${s.name}</div><div class="as">Class ${s.class} · ${s.rollNumber}</div><div class="at">🕐 ${ta[s.rollNumber].time}</div></div>`).join('')+(pr>5?`<p style="color:var(--text-light);font-size:.75rem;margin-top:6px">+${pr-5} more...</p>`:''):'<div class="empty" style="padding:16px 0"><div class="ei">📋</div><p>No attendance today</p></div>';
+ae.innerHTML=plist.length?plist.map(s=>`<div class="ac pres" style="margin-bottom:7px"><div class="an">${s.name}</div><div class="as">Class ${s.class} · ${s.rollNumber}</div><div class="at">🕐 ${ta[s.rollNumber].time}</div></div>`).join('')+(pr>5?`<p style="color:var(--text-light);font-size:.75rem;margin-top:6px">+${pr-5} more...</p>`:''):'<div class="empty" style="padding:16px 0"><div class="ei">📋</div><p>No attendance today</p></div>';
 
-const rb=[...dbCache.bills].sort((a,b)=>new Date(b.createdAt)-new Date(a.createdAt)).slice(0,5);
+const be=document.getElementById('dBills'),rb=[...dbCache.bills].sort((a,b)=>new Date(b.createdAt)-new Date(a.createdAt)).slice(0,5);
 
-dBills.innerHTML=rb.length?rb.map(b=>`<div style="display:flex;gap:10px;padding:8px;background:var(--cream);border-radius:7px;margin-bottom:5px"><div style="flex:1"><div style="font-size:.82rem;font-weight:600;color:var(--navy)">${b.studentName}</div><div style="font-size:.7rem;color:var(--text-light)">${MO[b.month]} ${b.year} · Class ${b.studentClass}</div></div><div style="font-family:'DM Mono',monospace;font-size:.82rem;font-weight:600;color:var(--navy)">₹${(b.paidAmount||b.total).toLocaleString('en-IN')}</div></div>`).join(''):'<div class="empty" style="padding:16px 0"><div class="ei">💳</div><p>No bills yet</p></div>';
-
-console.log('📊 Dashboard rendered');
+be.innerHTML=rb.length?rb.map(b=>`<div style="display:flex;gap:10px;padding:8px;background:var(--cream);border-radius:7px;margin-bottom:5px"><div style="flex:1"><div style="font-size:.82rem;font-weight:600;color:var(--navy)">${b.studentName}</div><div style="font-size:.7rem;color:var(--text-light)">${MO[b.month]} ${b.year} · Class ${b.studentClass}</div></div><div style="font-family:'DM Mono',monospace;font-size:.82rem;font-weight:600;color:var(--navy)">₹${(b.paidAmount||b.total).toLocaleString('en-IN')}</div></div>`).join(''):'<div class="empty" style="padding:16px 0"><div class="ei">💳</div><p>No bills yet</p></div>';
 
 }
 
 function renderStudents(){
 
-const scnt = document.getElementById('scnt');
-
-const sGrid = document.getElementById('sGrid');
-
-if(!scnt || !sGrid) return;
-
 const srch=(document.getElementById('srch')?.value||'').toLowerCase(),cls=document.getElementById('fCls')?.value||'',sess=document.getElementById('fSess')?.value||'';
 
 let list=dbCache.students.filter(s=>{if(cls&&s.class!==cls)return false;if(sess&&s.session!==sess)return false;if(srch&&!s.name.toLowerCase().includes(srch)&&!s.rollNumber.toLowerCase().includes(srch))return false;return true;});
 
-scnt.textContent=list.length;
+document.getElementById('scnt').textContent=list.length;
 
-if(!list.length){sGrid.innerHTML='<div class="empty"><div class="ei">👤</div><h4>No students found</h4></div>';return;}
+const g=document.getElementById('sGrid');
 
-sGrid.innerHTML=list.map(s=>{
+if(!list.length){g.innerHTML='<div class="empty"><div class="ei">👤</div><h4>No students found</h4></div>';return;}
+
+g.innerHTML=list.map(s=>{
 
 const ap=getAP(s.rollNumber),init=s.name.split(' ').map(w=>w[0]).join('').substring(0,2).toUpperCase(),pm=dbCache.bills.filter(b=>b.studentId===s.id).length;
 
 return`<div class="sc"><div class="av">${init}</div><div class="sm"><h3>${s.name} <span class="bdg bdg-c">Class ${s.class}</span> <span class="bdg bdg-s">${s.session}</span></h3><div class="sub"><span>📋 ${s.rollNumber}</span><span>👪 ${s.parentName}</span><span>📱 ${s.phoneNumber}</span></div><div style="margin-top:5px;display:flex;align-items:center;gap:9px"><div style="flex:1;background:#e9ecef;border-radius:20px;height:5px;max-width:140px"><div style="background:${ap>=75?'var(--success)':ap>=50?'var(--warning)':'var(--danger)'};width:${ap}%;height:5px;border-radius:20px"></div></div><span style="font-size:.7rem;color:var(--text-light)">${ap}% · ${pm} bills</span></div></div><div class="sa"><button class="btn btn-i btn-xs" onclick="showQR('${s.id}')">QR Code</button><button class="btn btn-g btn-xs" onclick="qkBill('${s.id}')">Bill</button><button class="btn btn-d btn-xs" onclick="delStu('${s.id}')">🗑</button></div></div>`;
 
 }).join('');
-
-console.log('👥 Students rendered:', list.length);
 
 }
 
@@ -1255,11 +1020,9 @@ list.forEach((s,i)=>{
 
 };
 
-// ===== ATTENDANCE WITH QR CODE SCANNING (FULLY OPTIMIZED FOR MOBILE) =====
+// ===== ATTENDANCE WITH CLASS FILTER FIRST =====
 
 window.markFromQR = async function(r){
-
-console.log('📲 QR Scan - Roll Number:', r);
 
 const s=dbCache.students.find(s=>s.rollNumber===r);
 
@@ -1275,9 +1038,9 @@ return;
 
 const td=new Date().toISOString().split('T')[0];
 
-// Check if already marked (use cache)
+if(!dbCache.attendance[td])dbCache.attendance[td]={};
 
-if(dbCache.attendance[td] && dbCache.attendance[td][r]){
+if(dbCache.attendance[td][r]){
 
 toast('Already marked! '+s.name+' at '+dbCache.attendance[td][r].time, 'wrn', 5000);
 
@@ -1289,13 +1052,9 @@ return;
 
 const time=new Date().toLocaleTimeString('en-IN');
 
-showLoader();
-
 try {
 
 await saveAttendance(td, r, {name:s.name,class:s.class,time});
-
-console.log('✅ Attendance saved via QR for', s.name);
 
 toast('✓ Attendance Marked! '+s.name+' (Class '+s.class+') at '+time, 'suc', 5000);
 
@@ -1303,13 +1062,9 @@ window.history.replaceState({}, document.title, window.location.pathname);
 
 } catch (error) {
 
-console.error('❌ Error saving attendance:', error);
-
 toast('Error saving attendance','err');
 
 }
-
-hideLoader();
 
 };
 
@@ -1321,9 +1076,9 @@ if(!r) return;
 
 const f = document.getElementById('sFeed');
 
-if(!f) return;
-
 f.style.display='flex';
+
+// Find student by roll number (no class filter needed)
 
 const s = dbCache.students.find(s => s.rollNumber === r);
 
@@ -1337,9 +1092,11 @@ f.innerHTML='✗ Student not found with Roll Number: <b>' + r + '</b>';
 
 const td = new Date().toISOString().split('T')[0];
 
+if(!dbCache.attendance[td]) dbCache.attendance[td] = {};
 
 
-if(dbCache.attendance[td] && dbCache.attendance[td][r]){
+
+if(dbCache.attendance[td][r]){
 
   f.className='sfeed wrn';
 
@@ -1348,10 +1105,6 @@ if(dbCache.attendance[td] && dbCache.attendance[td][r]){
 } else {
 
   const time = new Date().toLocaleTimeString('en-IN');
-
-  
-
-  showLoader();
 
   
 
@@ -1365,19 +1118,9 @@ if(dbCache.attendance[td] && dbCache.attendance[td][r]){
 
   } catch (error) {
 
-    console.error('Error saving attendance:', error);
-
     toast('Error saving','err');
 
-    f.className='sfeed err';
-
-    f.innerHTML='✗ Error saving attendance';
-
   }
-
-  
-
-  hideLoader();
 
 }
 
@@ -1391,25 +1134,13 @@ setTimeout(() => {f.style.display='none';}, 3500);
 
 function renderAttR(){
 
-const aDate = document.getElementById('aDate');
-
-const aCls = document.getElementById('aCls');
-
-const aStats = document.getElementById('aStats');
-
-const aReport = document.getElementById('aReport');
-
-if(!aDate || !aStats || !aReport) return;
-
-const date=aDate.value,cls=aCls?.value||'';
-
-if(!date)return;
+const date=document.getElementById('aDate')?.value,cls=document.getElementById('aCls')?.value||'';if(!date)return;
 
 const da=dbCache.attendance[date]||{};let ss=dbCache.students.filter(s=>s.session===dbCache.cur);if(cls)ss=ss.filter(s=>s.class===cls);
 
 const pr=ss.filter(s=>da[s.rollNumber]),ab=ss.filter(s=>!da[s.rollNumber]);
 
-aStats.innerHTML=`<div class="sbox"><div class="sic si-b">👥</div><div class="snum">${ss.length}</div><div class="slbl">Total</div></div><div class="sbox"><div class="sic si-g">✓</div><div class="snum">${pr.length}</div><div class="slbl">Present</div></div><div class="sbox"><div class="sic si-r">✗</div><div class="snum">${ab.length}</div><div class="slbl">Absent</div></div><div class="sbox"><div class="sic si-gold">📊</div><div class="snum">${ss.length?Math.round(pr.length/ss.length*100):0}%</div><div class="slbl">Rate</div></div>`;
+document.getElementById('aStats').innerHTML=`<div class="sbox"><div class="sic si-b">👥</div><div class="snum">${ss.length}</div><div class="slbl">Total</div></div><div class="sbox"><div class="sic si-g">✓</div><div class="snum">${pr.length}</div><div class="slbl">Present</div></div><div class="sbox"><div class="sic si-r">✗</div><div class="snum">${ab.length}</div><div class="slbl">Absent</div></div><div class="sbox"><div class="sic si-gold">📊</div><div class="snum">${ss.length?Math.round(pr.length/ss.length*100):0}%</div><div class="slbl">Rate</div></div>`;
 
 let h='<div class="sdiv">Present ('+pr.length+')</div><div class="agrid">';
 
@@ -1419,13 +1150,11 @@ h+='</div><div class="sdiv">Absent ('+ab.length+')</div><div class="agrid">';
 
 ab.forEach(s=>{h+=`<div class="ac abs"><div class="an">${s.name}</div><div class="as">Roll ${s.rollNumber} · Class ${s.class}</div><div class="as">📱 ${s.phoneNumber}</div></div>`;});
 
-h+='</div>';aReport.innerHTML=h;
-
-console.log('📋 Attendance rendered');
+h+='</div>';document.getElementById('aReport').innerHTML=h;
 
 }
 
-// ===== BILLING (WITH AUTO-GENERATION) =====
+// ===== BILLING (IMPROVED WITH AUTO-GENERATION AND BETTER PAYMENT MESSAGES) =====
 
 let cb={student:null,items:[],unpaidBills:[]};
 
@@ -1449,150 +1178,134 @@ const s=dbCache.students.find(s=>s.id===id);if(!s)return;
 
 cb.student=s;cb.items=[{name:'Monthly Fee',price:s.monthlyFee}];
 
+console.log('Loading bill for student:', s.name);
+console.log('Current bills in cache:', dbCache.bills.filter(b=>b.studentId===id).length);
+
+// If student is admitted, auto-generate missing monthly bills first
 if (isStudentAdmitted(id)) {
-
-showLoader();
-
-await autoGenerateMissingBills(s);
-
-await new Promise(resolve => setTimeout(resolve, 500));
-
-try {
-
-  const uid = auth.currentUser.uid;
-
-  const billsSnap = await getDocs(collection(db, 'users', uid, 'bills'));
-
-  dbCache.bills = billsSnap.docs.map(doc => ({id: doc.id, ...doc.data()}));
-
-} catch (error) {
-
-  console.error('Error reloading bills:', error);
-
-}
-
-hideLoader();
-
+  console.log('Student is admitted, auto-generating bills...');
+  showLoader();
+  await autoGenerateMissingBills(s);
+  
+  // Wait a bit for Firebase to update
+  await new Promise(resolve => setTimeout(resolve, 500));
+  
+  // Reload all bills from database to get the latest data
+  try {
+    const uid = auth.currentUser.uid;
+    const billsSnap = await getDocs(collection(db, 'users', uid, 'bills'));
+    dbCache.bills = billsSnap.docs.map(doc => ({id: doc.id, ...doc.data()}));
+    console.log('Reloaded bills from database. Total bills:', dbCache.bills.length);
+    console.log('Bills for this student:', dbCache.bills.filter(b=>b.studentId===id).length);
+  } catch (error) {
+    console.error('Error reloading bills:', error);
+  }
+  
+  hideLoader();
 }
 
 loadUnpaidBillsAndRender(id, s);
 
 };
 
+// Helper function to load unpaid bills and render
 function loadUnpaidBillsAndRender(studentId, student) {
-
-const mo=parseInt(document.getElementById('bMo').value);
-
-const yr=parseInt(document.getElementById('bYr').value);
-
-const allBills=dbCache.bills.filter(b=>b.studentId===studentId);
-
-cb.unpaidBills=allBills.filter(b => {
-
-if (b.month === mo && b.year === yr) return false;
-
-return !b.paid || (b.total > (b.paidAmount || 0));
-
-});
-
-updBP();
-
-}
-
-async function autoGenerateMissingBills(student) {
-
-const currentDate = new Date();
-
-const currentMonth = currentDate.getMonth() + 1;
-
-const currentYear = currentDate.getFullYear();
-
-const hasPaidBill = dbCache.bills.some(b => b.studentId === student.id && b.paid && b.paidAmount > 0);
-
-if (!hasPaidBill) return;
-
-const joiningDate = new Date(student.joiningDate);
-
-let startMonth = joiningDate.getMonth() + 1;
-
-let startYear = joiningDate.getFullYear();
-
-let month = startMonth;
-
-let year = startYear;
-
-while (year < currentYear || (year === currentYear && month <= currentMonth)) {
-
-const existingBill = dbCache.bills.find(
-
-  b => b.studentId === student.id && b.month === month && b.year === year
-
-);
-
-if (!existingBill) {
-
-  const newBill = {
-
-    studentId: student.id,
-
-    studentName: student.name,
-
-    studentClass: student.class,
-
-    rollNumber: student.rollNumber,
-
-    parentName: student.parentName,
-
-    phone: student.phoneNumber,
-
-    month: month,
-
-    year: year,
-
-    total: student.monthlyFee,
-
-    paidAmount: 0,
-
-    paid: false,
-
-    items: [{name: 'Monthly Fee', price: student.monthlyFee}],
-
-    createdAt: new Date().toISOString(),
-
-    updatedAt: new Date().toISOString(),
-
-    session: student.session,
-
-    autoGenerated: true
-
-  };
-
+  const mo=parseInt(document.getElementById('bMo').value);
+  const yr=parseInt(document.getElementById('bYr').value);
   
+  console.log(`Loading unpaid bills for month: ${mo}/${yr}`);
+  
+  // Load all bills for this student
+  const allBills=dbCache.bills.filter(b=>b.studentId===studentId);
+  
+  console.log('All bills for student:', allBills.map(b => `${b.month}/${b.year} - Paid: ${b.paid} - Amount: ${b.paidAmount}/${b.total}`));
+  
+  // Get unpaid bills EXCLUDING the current month being generated
+  cb.unpaidBills=allBills.filter(b => {
+    // Exclude current month/year being generated
+    if (b.month === mo && b.year === yr) return false;
+    // Include if unpaid or partially paid
+    return !b.paid || (b.total > (b.paidAmount || 0));
+  });
+  
+  console.log('Unpaid bills (excluding current month):', cb.unpaidBills.map(b => `${b.month}/${b.year} - Due: ₹${b.total - (b.paidAmount || 0)}`));
+  
+  updBP();
+}
 
-  try {
-
-    await saveBillToDb(newBill);
-
-  } catch (error) {
-
-    console.error('Error auto-generating bill:', error);
-
+// ===== AUTO-GENERATE MISSING MONTHLY BILLS FOR ADMITTED STUDENTS =====
+async function autoGenerateMissingBills(student) {
+  const currentDate = new Date();
+  const currentMonth = currentDate.getMonth() + 1; // 1-12
+  const currentYear = currentDate.getFullYear();
+  
+  // Check if student has any paid bill (admission confirmation)
+  const hasPaidBill = dbCache.bills.some(b => b.studentId === student.id && b.paid && b.paidAmount > 0);
+  
+  if (!hasPaidBill) {
+    console.log('Student not admitted yet - no paid bills');
+    return; // Not admitted yet - no paid bills
   }
-
-}
-
-month++;
-
-if (month > 12) {
-
-  month = 1;
-
-  year++;
-
-}
-
-}
-
+  
+  // Get joining date to determine from when to generate bills
+  const joiningDate = new Date(student.joiningDate);
+  let startMonth = joiningDate.getMonth() + 1; // 1-12
+  let startYear = joiningDate.getFullYear();
+  
+  console.log(`Auto-generating bills for ${student.name} from ${startMonth}/${startYear} to ${currentMonth}/${currentYear}`);
+  
+  // Generate bills from joining month to current month
+  let month = startMonth;
+  let year = startYear;
+  let generatedCount = 0;
+  
+  while (year < currentYear || (year === currentYear && month <= currentMonth)) {
+    // Check if bill already exists for this month
+    const existingBill = dbCache.bills.find(
+      b => b.studentId === student.id && b.month === month && b.year === year
+    );
+    
+    if (!existingBill) {
+      console.log(`Creating bill for ${month}/${year}`);
+      // Create the missing bill
+      const newBill = {
+        studentId: student.id,
+        studentName: student.name,
+        studentClass: student.class,
+        rollNumber: student.rollNumber,
+        parentName: student.parentName,
+        phone: student.phoneNumber,
+        month: month,
+        year: year,
+        total: student.monthlyFee,
+        paidAmount: 0,
+        paid: false,
+        items: [{name: 'Monthly Fee', price: student.monthlyFee}],
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+        session: student.session,
+        autoGenerated: true
+      };
+      
+      try {
+        await saveBillToDb(newBill);
+        generatedCount++;
+      } catch (error) {
+        console.error('Error auto-generating bill:', error);
+      }
+    } else {
+      console.log(`Bill already exists for ${month}/${year}`);
+    }
+    
+    // Move to next month
+    month++;
+    if (month > 12) {
+      month = 1;
+      year++;
+    }
+  }
+  
+  console.log(`Auto-generated ${generatedCount} bills`);
 }
 
 window.addBillItem = function(){
@@ -1631,56 +1344,40 @@ const mo=parseInt(document.getElementById('bMo').value),yr=document.getElementBy
 
 const existing=dbCache.bills.find(b=>b.studentId===s.id&&b.month===mo&&b.year==yr);
 
+// Check if this month's bill is already fully paid
 const isFullyPaid=existing&&existing.paid&&existing.paidAmount>=existing.total;
 
+// If current month bill exists and has partial payment, show it in the bill info
 let currentMonthPreviousPayment = 0;
-
 if (existing && existing.paidAmount > 0 && !isFullyPaid) {
-
-currentMonthPreviousPayment = existing.paidAmount;
-
+  currentMonthPreviousPayment = existing.paidAmount;
 }
 
 const unpaidTotal=cb.unpaidBills.reduce((a,b)=>a+(b.total-(b.paidAmount||0)),0);
 
 const grandTotal=curTotal+unpaidTotal;
 
+// Get current deposit value if exists (to preserve user input during re-render)
 let currentDeposit = grandTotal;
-
 const existingDepositInput = document.getElementById('depositAmount');
-
 if (existingDepositInput && existingDepositInput.value) {
-
-const parsed = parseFloat(existingDepositInput.value);
-
-if (!isNaN(parsed)) currentDeposit = parsed;
-
+  const parsed = parseFloat(existingDepositInput.value);
+  if (!isNaN(parsed)) currentDeposit = parsed;
 }
 
+// Payment status message
 let paymentStatusMessage = '';
-
 if (currentDeposit > 0) {
-
-if (currentDeposit >= grandTotal) {
-
-  paymentStatusMessage = '<div style="margin:12px 0;padding:12px;background:#d4edda;border:1px solid #28a745;border-radius:8px;color:#155724;font-weight:600;text-align:center">✓ Thank you for full payment!</div>';
-
-} else {
-
-  const remaining = grandTotal - currentDeposit;
-
-  paymentStatusMessage = `<div style="margin:12px 0;padding:12px;background:#fff3cd;border:1px solid #ffc107;border-radius:8px;color:#856404">
-
-    <div style="font-weight:600;margin-bottom:4px">Partial Payment</div>
-
-    <div style="font-size:.85rem">Deposit: ₹${currentDeposit.toLocaleString('en-IN')}</div>
-
-    <div style="font-size:.85rem;font-weight:700;margin-top:4px;color:#dc3545">Remaining Due: ₹${remaining.toLocaleString('en-IN')}</div>
-
-  </div>`;
-
-}
-
+  if (currentDeposit >= grandTotal) {
+    paymentStatusMessage = '<div style="margin:12px 0;padding:12px;background:#d4edda;border:1px solid #28a745;border-radius:8px;color:#155724;font-weight:600;text-align:center">✓ Thank you for full payment!</div>';
+  } else {
+    const remaining = grandTotal - currentDeposit;
+    paymentStatusMessage = `<div style="margin:12px 0;padding:12px;background:#fff3cd;border:1px solid #ffc107;border-radius:8px;color:#856404">
+      <div style="font-weight:600;margin-bottom:4px">Partial Payment</div>
+      <div style="font-size:.85rem">Deposit: ₹${currentDeposit.toLocaleString('en-IN')}</div>
+      <div style="font-size:.85rem;font-weight:700;margin-top:4px;color:#dc3545">Remaining Due: ₹${remaining.toLocaleString('en-IN')}</div>
+    </div>`;
+  }
 }
 
 document.getElementById('bPrevW').style.display='block';
@@ -1690,6 +1387,8 @@ document.getElementById('bPrev').innerHTML=`<div style="background:#fff;border:2
 <div style="font-family:'Playfair Display',serif;font-size:1.4rem;font-weight:900;color:var(--navy);text-align:center">Central Public School</div>
 
 <div style="text-align:center;margin:12px 0;font-size:.95rem;font-weight:700;color:var(--gold)">FEE RECEIPT ${isFullyPaid?'<span class="bdg bdg-paid">PAID ✓</span>':''}</div>
+
+
 
 <div style="margin:12px 0;font-size:.82rem;border-bottom:1px solid var(--border);padding-bottom:10px">
 
@@ -1707,6 +1406,8 @@ document.getElementById('bPrev').innerHTML=`<div style="background:#fff;border:2
 
 </div>
 
+
+
 <div style="margin:12px 0">
 
   <div style="font-weight:700;color:var(--navy);margin-bottom:8px">Current Month Charges:</div>
@@ -1721,6 +1422,8 @@ document.getElementById('bPrev').innerHTML=`<div style="background:#fff;border:2
 
 </div>
 
+
+
 ${cb.unpaidBills.length>0?`<div style="margin:12px 0;padding:12px;background:#fff3cd;border:1px solid #ffc107;border-radius:8px">
 
   <div style="font-weight:700;color:#856404;margin-bottom:8px">⚠️ Previous Unpaid Bills:</div>
@@ -1731,11 +1434,15 @@ ${cb.unpaidBills.length>0?`<div style="margin:12px 0;padding:12px;background:#ff
 
 </div>`:''}
 
+
+
 <div style="margin:16px 0;padding:12px;background:var(--navy);color:#fff;border-radius:6px">
 
   <div style="display:flex;justify-content:space-between;align-items:center"><span style="font-size:.78rem">GRAND TOTAL</span><span style="font-family:'Playfair Display',serif;font-size:1.3rem;font-weight:800;color:var(--gold-light)">₹${grandTotal.toLocaleString('en-IN')}</span></div>
 
 </div>
+
+
 
 <div class="np" style="margin-top:12px">
 
@@ -1753,18 +1460,15 @@ ${paymentStatusMessage}
 
   </div>`;
 
+// Add event listener after rendering
 setTimeout(() => {
-
-const depositInput = document.getElementById('depositAmount');
-
-if (depositInput) {
-
-  depositInput.removeEventListener('input', updBP);
-
-  depositInput.addEventListener('input', updBP);
-
-}
-
+  const depositInput = document.getElementById('depositAmount');
+  if (depositInput) {
+    // Remove old listener to prevent duplicates
+    depositInput.removeEventListener('input', updBP);
+    // Add new listener
+    depositInput.addEventListener('input', updBP);
+  }
 }, 50);
 
 }
@@ -1813,6 +1517,10 @@ try {
 
 let remainingDeposit=depositAmount;
 
+
+
+// Sort unpaid bills by date (oldest first)
+
 const sortedUnpaidBills = [...cb.unpaidBills].sort((a,b) => {
 
   const dateA = new Date(a.year, a.month-1);
@@ -1822,6 +1530,10 @@ const sortedUnpaidBills = [...cb.unpaidBills].sort((a,b) => {
   return dateA - dateB;
 
 });
+
+
+
+// Pay old unpaid bills first (FIFO)
 
 for(let oldBill of sortedUnpaidBills){
 
@@ -1851,7 +1563,21 @@ for(let oldBill of sortedUnpaidBills){
 
 }
 
+
+
+// Create/update current month bill with remaining deposit
+
 const existingCurrentBill = dbCache.bills.find(b=>b.studentId===s.id&&b.month===mo&&b.year===yr);
+
+
+
+// Add any previous payment from existing bill to the remaining deposit
+
+const previousPayment = existingCurrentBill?.paidAmount || 0;
+
+const totalCurrentMonthPayment = previousPayment + remainingDeposit;
+
+
 
 const newBill={
 
@@ -1875,9 +1601,9 @@ const newBill={
 
   total:curTotal,
 
-  paidAmount:Math.min(remainingDeposit,curTotal),
+  paidAmount:Math.min(totalCurrentMonthPayment,curTotal),
 
-  paid:remainingDeposit>=curTotal,
+  paid:totalCurrentMonthPayment>=curTotal,
 
   items:[...cb.items],
 
@@ -1889,19 +1615,27 @@ const newBill={
 
 };
 
+
+
 await saveBillToDb(newBill);
+
+
 
 if(depositAmount>=grandTotal){
 
-  toast('✓ Thank you for full payment! Bill fully paid for '+s.name,'suc',4000);
+  toast('✓ Thank you for full payment! All bills fully paid for '+s.name,'suc',4000);
 
 }else{
 
   const remaining = grandTotal - depositAmount;
 
-  toast('Partial payment recorded: ₹'+depositAmount.toLocaleString('en-IN')+' paid. Remaining Due: ₹'+remaining.toLocaleString('en-IN'),'inf',5000);
+  toast('Partial payment: ₹'+depositAmount.toLocaleString('en-IN')+' paid. Remaining Due: ₹'+remaining.toLocaleString('en-IN'),'inf',5000);
 
 }
+
+
+
+// Reload to show updated bills and auto-generate next months if needed
 
 setTimeout(() => loadSBill(), 500);
 
@@ -1983,10 +1717,6 @@ toast('Reminder sent','suc');
 
 function renderHist(){
 
-const hList = document.getElementById('hList');
-
-if(!hList) return;
-
 const srch=(document.getElementById('hSrch')?.value||'').toLowerCase();
 
 const mo=parseInt(document.getElementById('hMo')?.value||'0');
@@ -2001,9 +1731,11 @@ if(cls)bills=bills.filter(b=>b.studentClass===cls);
 
 if(srch)bills=bills.filter(b=>b.studentName.toLowerCase().includes(srch)||b.rollNumber.toLowerCase().includes(srch));
 
-if(!bills.length){hList.innerHTML='<div class="empty"><div class="ei">📂</div><h4>No bills found</h4></div>';return;}
+const c=document.getElementById('hList');
 
-hList.innerHTML=bills.map(b=>{
+if(!bills.length){c.innerHTML='<div class="empty"><div class="ei">📂</div><h4>No bills found</h4></div>';return;}
+
+c.innerHTML=bills.map(b=>{
 
 const isPaid=b.paid&&b.paidAmount>=b.total;
 
@@ -2011,11 +1743,11 @@ const isPartial=b.paidAmount>0&&b.paidAmount<b.total;
 
 const statusBadge=isPaid?'<span class="bdg bdg-paid">PAID</span>':isPartial?'<span class="bdg" style="background:rgba(230,126,34,.1);color:var(--warning)">PARTIAL</span>':'<span class="bdg" style="background:rgba(192,57,43,.1);color:var(--danger)">UNPAID</span>';
 
+
+
 return`<div class="sc"><div class="av" style="background:linear-gradient(135deg,${isPaid?'var(--success)':isPartial?'var(--warning)':'var(--danger)'},#20c997)">₹</div><div class="sm"><h3>${b.studentName} <span class="bdg bdg-c">Class ${b.studentClass}</span> ${statusBadge}${b.autoGenerated?' <span class="bdg" style="background:rgba(52,152,219,.1);color:#3498db;font-size:.65rem">AUTO</span>':''}</h3><div class="sub"><span>📝 ${b.rollNumber}</span><span>📅 ${MO[b.month]} ${b.year}</span><span>👪 ${b.parentName}</span></div>${isPartial?`<div style="font-size:.75rem;color:var(--text-mid);margin-top:4px">Paid: ₹${b.paidAmount.toLocaleString('en-IN')} / ₹${b.total.toLocaleString('en-IN')}</div>`:''}</div><div style="text-align:right;flex-shrink:0"><div style="font-family:'Playfair Display',serif;font-size:1.2rem;font-weight:800;color:var(--navy)">₹${(b.paidAmount||b.total).toLocaleString('en-IN')}</div><div style="font-size:.72rem;color:var(--text-light)">${new Date(b.createdAt).toLocaleDateString('en-IN')}</div><button class="btn btn-i btn-xs" onclick="sendBillSMSById('${b.id}')" style="margin-top:4px">📱 SMS</button></div></div>`;
 
 }).join('');
-
-console.log('💰 Bills history rendered:', bills.length);
 
 }
 
@@ -2039,13 +1771,9 @@ window.noticeTypeChange = function(){
 
 const type=document.getElementById('noticeTo').value;
 
-const classSelect = document.getElementById('noticeClassSelect');
+document.getElementById('noticeClassSelect').style.display=type==='class'?'block':'none';
 
-const studentSelect = document.getElementById('noticeStudentSelect');
-
-if(classSelect) classSelect.style.display=type==='class'?'block':'none';
-
-if(studentSelect) studentSelect.style.display=type==='select'?'block':'none';
+document.getElementById('noticeStudentSelect').style.display=type==='select'?'block':'none';
 
 if(type==='select')loadStudentCheckList();
 
@@ -2055,11 +1783,7 @@ function loadStudentCheckList(){
 
 const list=dbCache.students.filter(s=>s.session===dbCache.cur);
 
-const checkList = document.getElementById('studentCheckList');
-
-if(!checkList) return;
-
-checkList.innerHTML=list.map(s=>`<div style="padding:5px;border-bottom:1px solid var(--border)"><label style="display:flex;align-items:center;cursor:pointer"><input type="checkbox" class="stu-check" value="${s.id}"><span style="font-size:.85rem">${s.name} (${s.rollNumber}) - Class ${s.class}</span></label></div>`).join('');
+document.getElementById('studentCheckList').innerHTML=list.map(s=>`<div style="padding:5px;border-bottom:1px solid var(--border)"><label style="display:flex;align-items:center;cursor:pointer"><input type="checkbox" class="stu-check" value="${s.id}"><span style="font-size:.85rem">${s.name} (${s.rollNumber}) - Class ${s.class}</span></label></div>`).join('');
 
 }
 
@@ -2121,7 +1845,11 @@ const notice={
 
 };
 
+
+
 await saveNoticeToDb(notice);
+
+
 
 toast(`Notice sent to ${recipients.length} parents!`,'suc');
 
@@ -2145,15 +1873,13 @@ hideLoader();
 
 function renderNotices(){
 
-const noticeHistory = document.getElementById('noticeHistory');
-
-if(!noticeHistory) return;
-
 const list=[...dbCache.notices].sort((a,b)=>new Date(b.createdAt)-new Date(a.createdAt));
 
-if(!list.length){noticeHistory.innerHTML='<div class="empty"><div class="ei">📢</div><h4>No notices yet</h4></div>';return;}
+const c=document.getElementById('noticeHistory');
 
-noticeHistory.innerHTML=list.map(n=>`<div class="notice-card">
+if(!list.length){c.innerHTML='<div class="empty"><div class="ei">📢</div><h4>No notices yet</h4></div>';return;}
+
+c.innerHTML=list.map(n=>`<div class="notice-card">
 
 <h4>${n.title}</h4>
 
@@ -2161,23 +1887,15 @@ noticeHistory.innerHTML=list.map(n=>`<div class="notice-card">
 
 <div class="msg">${n.message}</div>
 
-  </div>`).join('');
-
-console.log('📢 Notices rendered:', list.length);
-
-}
+  </div>`).join('');}
 
 // ===== REPORTS =====
 
 function renderRpt(){
 
-const rCnt = document.getElementById('rCnt');
-
-if(!rCnt) return;
-
 const date=document.getElementById('rDate')?.value,cls=document.getElementById('rCls')?.value||'';
 
-if(!date){rCnt.innerHTML='<div class="empty"><div class="ei">📊</div><p>Select a date</p></div>';return;}
+if(!date){document.getElementById('rCnt').innerHTML='<div class="empty"><div class="ei">📊</div><p>Select a date</p></div>';return;}
 
 const da=dbCache.attendance[date]||{};let ss=dbCache.students.filter(s=>s.session===dbCache.cur);if(cls)ss=ss.filter(s=>s.class===cls);
 
@@ -2191,9 +1909,7 @@ h+='</div><div class="sdiv">Absent ('+ab.length+')</div><div class="agrid">';
 
 ab.forEach(s=>{h+=`<div class="ac abs"><div class="an">${s.name}</div><div class="as">Roll ${s.rollNumber} · Class ${s.class}</div></div>`;});
 
-h+='</div>';rCnt.innerHTML=h;
-
-console.log('📊 Report rendered');
+h+='</div>';document.getElementById('rCnt').innerHTML=h;
 
 }
 
@@ -2225,13 +1941,13 @@ dbCache.cur=name;
 
 await saveSettings();
 
+
+
 document.getElementById('newSessName').value='';
 
 clsM('newSessionM');
 
-const sessTag = document.getElementById('sessTag');
-
-if(sessTag) sessTag.textContent='Session '+dbCache.cur;
+document.getElementById('sessTag').textContent='Session '+dbCache.cur;
 
 toast('Session created: '+name,'suc');
 
@@ -2249,10 +1965,6 @@ hideLoader();
 
 function renderSess(){
 
-const sessList = document.getElementById('sessList');
-
-if(!sessList) return;
-
 const all=[...new Set([dbCache.cur,...dbCache.sessions,...dbCache.students.map(s=>s.session).filter(Boolean)])].sort().reverse();
 
 let h='<div style="background:linear-gradient(135deg,var(--navy),var(--royal));border-radius:12px;padding:18px 22px;color:#fff;margin-bottom:20px"><h3 style="font-family:\'Playfair Display\',serif;font-size:1rem;font-weight:800">Active: Session '+dbCache.cur+'</h3><p style="font-size:.8rem;color:rgba(255,255,255,.7);margin-top:2px">All new registrations go here</p></div><div class="sgrid">';
@@ -2265,9 +1977,7 @@ h+=`<div class="card"><div style="display:flex;align-items:center;justify-conten
 
 });
 
-h+='</div>';sessList.innerHTML=h;
-
-console.log('📁 Sessions rendered');
+h+='</div>';document.getElementById('sessList').innerHTML=h;
 
 }
 
